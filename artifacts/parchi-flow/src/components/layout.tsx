@@ -29,7 +29,7 @@ interface LayoutProps { children: React.ReactNode }
 export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location] = useLocation();
-  const { user, business, logout } = useAuth();
+  const { user, business, logout, setBusiness, refreshBusiness } = useAuth();
   const token = getAuthToken();
 
   const { data: businessesData } = useQuery({
@@ -43,6 +43,14 @@ export default function Layout({ children }: LayoutProps) {
   });
 
   const businesses = businessesData?.businesses || [];
+
+  const handleSwitchBusiness = async (id: number) => {
+    const selected = businesses.find((b: { id: number }) => b.id === id);
+    if (!selected) return;
+    setBusiness(selected);
+    setSidebarOpen(false);
+    await refreshBusiness();
+  };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -76,10 +84,10 @@ export default function Layout({ children }: LayoutProps) {
             <p className="text-sm font-medium truncate">{business?.businessName || "Current Business"}</p>
             <p className="text-xs text-sidebar-foreground/60 truncate">{business?.city || "India"}</p>
           </div>
-          {businesses.length > 1 && (
-            <div className="space-y-1 max-h-28 overflow-y-auto">
+          {businesses.length > 0 && (
+            <div className="space-y-1 max-h-36 overflow-y-auto">
               {businesses.map((b: { id: number; businessName: string; city: string | null; state: string | null }) => (
-                <button key={b.id} className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-sidebar-accent">
+                <button key={b.id} onClick={() => handleSwitchBusiness(b.id)} className={cn("w-full text-left px-3 py-2 rounded-md text-sm hover:bg-sidebar-accent", business?.id === b.id && "bg-sidebar-accent") }>
                   <span className="block truncate">{b.businessName}</span>
                   <span className="block text-xs text-sidebar-foreground/60 truncate">{b.city || b.state || "India"}</span>
                 </button>

@@ -14,6 +14,7 @@ interface Business {
   businessType: string;
   city: string | null;
   state: string | null;
+  gstin: string | null;
   preferredLanguage: string;
 }
 
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (res.ok) {
         const biz = await res.json();
-        setBusiness(biz);
+        setBusiness(biz.business || biz);
       }
     } catch {}
   }, []);

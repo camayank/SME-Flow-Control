@@ -17,6 +17,7 @@ import ImportPage from "@/pages/import";
 import ReportsPage from "@/pages/reports";
 import ItemsPage from "@/pages/items";
 import InvoicesPage from "@/pages/invoices";
+import AuditPage from "@/pages/audit";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -66,6 +67,7 @@ function AppContent() {
         <Route path="/parchi" component={ParchiPage} />
         <Route path="/invoices" component={InvoicesPage} />
         <Route path="/items" component={ItemsPage} />
+        <Route path="/audit" component={AuditPage} />
         <Route path="/parties" component={PartiesPage} />
         <Route path="/parties/:id" component={PartyDetailPage} />
         <Route path="/outstandings" component={OutstandingsPage} />
@@ -83,7 +85,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "") }>
           <AuthProvider>
             <AppContent />
           </AuthProvider>
