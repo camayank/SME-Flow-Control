@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Sparkles, CheckCircle, ArrowUpRight, ArrowDownRight, AlertCircle, Plus, User } from "lucide-react";
+import { Mic, Sparkles, CheckCircle, ArrowUpRight, ArrowDownRight, AlertCircle, Plus, User, ReceiptText, IndianRupee, Tag, BadgeCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ParseResult {
@@ -60,6 +61,7 @@ export default function ParchiPage() {
   });
   const [mode, setMode] = useState<"text" | "form">("text");
   const [partySearch, setPartySearch] = useState("");
+  const [invoicePreviewOpen, setInvoicePreviewOpen] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -149,6 +151,8 @@ export default function ParchiPage() {
   ).slice(0, 6) || [];
 
   const selectedTxType = TRANSACTION_TYPES.find(t => t.value === form.eventType);
+  const isInvoiceLike = form.eventType === "credit_sale" || form.eventType === "payment_received" || form.eventType === "manual_parchi";
+  const invoiceTitle = form.eventType === "credit_sale" ? "Sales Invoice Draft" : "Ledger Draft";
 
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-5">
@@ -156,6 +160,19 @@ export default function ParchiPage() {
         <h1 className="text-xl font-bold">Parchi Entry</h1>
         <p className="text-sm text-muted-foreground">Transaction likhein ya type karein</p>
       </div>
+
+      <Card className="border-dashed border-primary/25 bg-primary/5">
+        <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Invoice-first booking</p>
+            <p className="text-xs text-muted-foreground">Vyapar-style next step: draft invoice, party ledger, and due tracking from one entry.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setInvoicePreviewOpen(true)}>
+            <ReceiptText className="h-4 w-4 mr-1.5" />
+            Preview Draft
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Mode switch */}
       <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
@@ -193,6 +210,11 @@ export default function ParchiPage() {
                 className="min-h-28 text-base resize-none"
                 autoFocus
               />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <div className="rounded-lg bg-muted/40 px-3 py-2 flex items-center gap-2"><IndianRupee className="h-3.5 w-3.5" /> Simple bookkeeping</div>
+              <div className="rounded-lg bg-muted/40 px-3 py-2 flex items-center gap-2"><Tag className="h-3.5 w-3.5" /> Party-linked entry</div>
+              <div className="rounded-lg bg-muted/40 px-3 py-2 flex items-center gap-2"><BadgeCheck className="h-3.5 w-3.5" /> Due / reminder ready</div>
             </div>
             <Button
               onClick={handleParse}
@@ -382,6 +404,36 @@ export default function ParchiPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={invoicePreviewOpen} onOpenChange={setInvoicePreviewOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ReceiptText className="h-5 w-5" />
+              {invoiceTitle}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg bg-muted p-3">
+              <p className="text-sm font-medium">{form.partyName || "Party pending"}</p>
+              <p className="text-xs text-muted-foreground">{form.eventDate}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Amount</p>
+                <p className="font-semibold">{form.amount ? formatCurrency(Number(form.amount)) : "—"}</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Type</p>
+                <p className="font-semibold">{selectedTxType?.label || "—"}</p>
+              </div>
+            </div>
+            <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+              Step one is simple accounting. Step two can add GST invoice number, print/share, and PDF export.
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Recent parchi tips */}
       <Card className="bg-primary/5 border-primary/20">
