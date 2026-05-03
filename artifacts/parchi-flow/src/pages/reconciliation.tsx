@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { apiPost, apiUrl, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +120,8 @@ export default function ReconciliationPage() {
     setActionDialog(action);
   };
 
+  const pendingVisible = items.filter(item => item.status === "pending");
+
   const groupedItems = {
     duplicates: items.filter(i => i.issueType === "possible_duplicate"),
     suspense: items.filter(i => ["unmatched_credit", "unmatched_debit", "bank_credit_without_party"].includes(i.issueType)),
@@ -220,6 +223,7 @@ export default function ReconciliationPage() {
           <CardContent className="py-12 text-center">
             <CheckCircle className="h-12 w-12 mx-auto text-emerald-500/30 mb-3" />
             <p className="text-muted-foreground font-medium">Sab clear! Koi pending items nahi hain 🎉</p>
+            <Button asChild variant="outline" size="sm" className="mt-3"><Link href="/import">Import more data</Link></Button>
           </CardContent>
         </Card>
       ) : (
@@ -237,7 +241,7 @@ export default function ReconciliationPage() {
             { value: "verification", list: groupedItems.verification },
           ].map(tab => (
             <TabsContent key={tab.value} value={tab.value} className="mt-3 space-y-2">
-              {tab.list.map(item => <ReconItemCard key={item.id} item={item} />)}
+              {(tab.value === "all" ? pendingVisible : tab.list).map(item => <ReconItemCard key={item.id} item={item} />)}
             </TabsContent>
           ))}
         </Tabs>

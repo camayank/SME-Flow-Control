@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { apiPost, apiUrl, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -158,6 +159,10 @@ export default function CollectionsPage() {
           <CardContent className="py-12 text-center">
             <CheckCircle className="h-12 w-12 mx-auto text-emerald-500/30 mb-3" />
             <p className="text-muted-foreground">Sab clear! Koi outstanding nahi hai 🎉</p>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <Button asChild variant="outline" size="sm"><Link href="/parchi">Add Parchi</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link href="/parties">Add Party</Link></Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -306,6 +311,10 @@ export default function CollectionsPage() {
           </div>
 
           <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={copyMessage} disabled={!generatedReminder?.message} className="gap-1.5">
+              <Copy className="h-4 w-4" />
+              Copy
+            </Button>
             {generatedReminder?.whatsappUrl && (
               <Button asChild variant="default" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 flex-1">
                 <a href={generatedReminder.whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={handleSendAndLog}>

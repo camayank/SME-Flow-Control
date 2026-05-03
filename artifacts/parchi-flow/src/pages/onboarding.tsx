@@ -82,6 +82,9 @@ export default function OnboardingPage() {
             <CardDescription>Ye jaankari aapke ledger aur reminders ke liye use hogi</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+              Tip: bas business name bharein aur aage badhein — baaki details optional hain.
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Business ka Naam *</Label>

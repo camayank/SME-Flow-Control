@@ -104,6 +104,8 @@ export default function DashboardPage() {
     );
   }
 
+  const isEmpty = !!data && !data.parties.total && !data.outstandings.totalReceivables && !data.outstandings.totalPayables && !data.recentActivity.length;
+
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-6xl mx-auto">
       {/* Header */}
@@ -114,13 +116,34 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Aaj ka overview</p>
         </div>
-        <Button asChild size="sm" className="gap-1.5">
-          <Link href="/parchi">
-            <Plus className="h-4 w-4" />
-            New Parchi
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/import">Import</Link>
+          </Button>
+          <Button asChild size="sm" className="gap-1.5">
+            <Link href="/parchi">
+              <Plus className="h-4 w-4" />
+              New Parchi
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {isEmpty && (
+        <Card className="border-dashed border-primary/30 bg-primary/5">
+          <CardContent className="py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold">Start here</p>
+              <p className="text-sm text-muted-foreground">Pehli entry, import, ya party add karke dashboard bhar dein.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm"><Link href="/parties">Add Party</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link href="/import">Import Data</Link></Button>
+              <Button asChild size="sm"><Link href="/parchi">New Parchi</Link></Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alert banner */}
       {data && (data.reconciliation.total > 0 || data.overdue.count > 0) && (
@@ -241,8 +264,9 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-24 flex items-center justify-center text-muted-foreground text-sm">
-                Koi outstanding nahi hai 🎉
+              <div className="h-24 flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
+                <span>Koi outstanding nahi hai 🎉</span>
+                <Button asChild variant="outline" size="sm"><Link href="/parchi">Add first entry</Link></Button>
               </div>
             )}
           </CardContent>
@@ -263,7 +287,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             {!data?.topDebtors.length ? (
-              <p className="text-sm text-muted-foreground px-4 pb-4">Koi outstanding nahi hai</p>
+              <div className="px-4 pb-4 text-sm text-muted-foreground space-y-2">
+                <p>Koi outstanding nahi hai</p>
+                <Button asChild variant="outline" size="sm"><Link href="/collections">Open Collections</Link></Button>
+              </div>
             ) : (
               <div className="divide-y">
                 {data.topDebtors.map((debtor, i) => (
@@ -312,9 +339,10 @@ export default function DashboardPage() {
             {!data?.recentActivity.length ? (
               <div className="px-4 pb-4 text-center py-8">
                 <p className="text-sm text-muted-foreground">Koi transactions nahi hain</p>
-                <Button asChild size="sm" className="mt-3">
-                  <Link href="/parchi">Pehli Parchi Dalein</Link>
-                </Button>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <Button asChild size="sm"><Link href="/parchi">Pehli Parchi Dalein</Link></Button>
+                  <Button asChild variant="outline" size="sm"><Link href="/import">Import file</Link></Button>
+                </div>
               </div>
             ) : (
               <div className="divide-y">
