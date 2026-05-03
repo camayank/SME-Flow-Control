@@ -157,7 +157,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="text-sm font-semibold text-emerald-900">What changed today</p>
-              <p className="text-xs text-emerald-900/75 mt-1">This helps users see real activity, not just static totals.</p>
+              <p className="text-xs text-emerald-900/75 mt-1">Tally, Marg, Busy aur similar users ko complex BI nahi chahiye — real syncing, clear overview, and decision support chahiye.</p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white px-2.5 py-1 border border-emerald-200">Actions: {data?.today?.activityCount || 0}</span>
@@ -197,7 +197,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="font-semibold">Drill-down shortcuts</p>
-              <p className="text-xs text-muted-foreground">Open the exact screen users usually need next.</p>
+              <p className="text-xs text-muted-foreground">One-tap access to syncing, overview, and action screens.</p>
             </div>
             <span className="text-xs text-muted-foreground">Fewer taps</span>
           </div>
