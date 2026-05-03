@@ -110,6 +110,12 @@ export default function PartyDetailPage() {
   const [reminderLang, setReminderLang] = useState("hinglish");
   const [reminderMsg, setReminderMsg] = useState<{ message: string; whatsappUrl: string | null } | null>(null);
   const [generatingReminder, setGeneratingReminder] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
+  const [paymentNote, setPaymentNote] = useState("");
+  const [paymentTarget, setPaymentTarget] = useState<{ id: number; label: string; due: number } | null>(null);
+  const [savingPayment, setSavingPayment] = useState(false);
   const [fuForm, setFuForm] = useState({ followUpType: "whatsapp", note: "", nextFollowUpAt: "", promisedPaymentDate: "", promisedAmount: "" });
   const [savingFU, setSavingFU] = useState(false);
   const [dateFilter, setDateFilter] = useState({ from: "", to: "" });
@@ -163,6 +169,45 @@ export default function PartyDetailPage() {
       toast({ title: "Error adding follow-up", variant: "destructive" });
     } finally {
       setSavingFU(false);
+    }
+  };
+
+  const openPayment = (target: { id: number; label: string; due: number }) => {
+    setPaymentTarget(target);
+    setPaymentAmount(String(target.due));
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+    setPaymentNote("");
+    setPaymentOpen(true);
+  };
+
+  const savePayment = async () => {
+    if (!paymentTarget) return;
+    setSavingPayment(true);
+    try {
+      const res = await fetch(apiUrl(`/outstandings/${paymentTarget.id}/status`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: "collected",
+          amountCollected: Number(paymentAmount),
+          paymentDate,
+          note: paymentNote || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to record payment");
+      toast({ title: "Payment recorded!" });
+      setPaymentOpen(false);
+      setPaymentTarget(null);
+      refetch();
+      qc.invalidateQueries({ queryKey: [apiUrl("/outstandings")] });
+      qc.invalidateQueries({ queryKey: [apiUrl("/dashboard")] });
+    } catch {
+      toast({ title: "Error recording payment", variant: "destructive" });
+    } finally {
+      setSavingPayment(false);
     }
   };
 
@@ -237,6 +282,11 @@ export default function PartyDetailPage() {
             <Button size="sm" variant="outline" className="gap-1.5 text-emerald-700 border-emerald-200"
               onClick={() => { setReminderOpen(true); generateReminder(); }}>
               <MessageCircle className="h-3.5 w-3.5" /> Remind
+            </Button>
+          )}
+          {summary.totalOverdue > 0 && (
+            <Button size="sm" variant="outline" className="gap-1.5 text-blue-700 border-blue-200" onClick={() => openPayment({ id: data.outstandings[0].id, label: data.outstandings[0].invoiceNumber || party.name, due: data.outstandings[0].amountDue })}>
+              <IndianRupee className="h-3.5 w-3.5" /> Record Payment
             </Button>
           )}
           <Button size="sm" variant="outline" className="gap-1.5"
@@ -612,6 +662,40 @@ export default function PartyDetailPage() {
                 </a>
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-blue-600" /> Record Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Outstanding</Label>
+              <Input className="mt-1 h-8 text-sm" value={paymentTarget?.label || ""} disabled />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Amount</Label>
+                <Input type="number" className="mt-1 h-8 text-sm" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Date</Label>
+                <Input type="date" className="mt-1 h-8 text-sm" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Note</Label>
+              <Textarea className="mt-1 text-sm" rows={3} value={paymentNote} onChange={e => setPaymentNote(e.target.value)} placeholder="Cash / UPI / Bank transfer" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setPaymentOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={savePayment} disabled={savingPayment || !paymentAmount}>{savingPayment ? "Saving..." : "Save Payment"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

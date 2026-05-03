@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { apiUrl, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
+import { apiUrl, apiPost, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { MessageCircle, AlertTriangle, Clock, IndianRupee, ChevronRight, TrendingUp } from "lucide-react";
+import { MessageCircle, AlertTriangle, Clock, IndianRupee, ChevronRight, TrendingUp, CheckCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Lightbulb, ArrowRight, ShieldCheck } from "lucide-react";
+import { Lightbulb, ArrowRight, ShieldCheck, Copy, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 interface Outstanding {
   id: number;
@@ -60,7 +65,14 @@ const AGING_COLORS: Record<string, string> = {
 export default function OutstandingsPage() {
   const [filter, setFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentItem, setPaymentItem] = useState<Outstanding | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
+  const [paymentNote, setPaymentNote] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
   const token = getAuthToken();
+  const { toast } = useToast();
 
   const { data: outstandings = [], isLoading } = useQuery<Outstanding[]>({
     queryKey: [apiUrl("/outstandings"), filter, priorityFilter],
@@ -108,7 +120,9 @@ export default function OutstandingsPage() {
       <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/30 transition-colors">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium text-sm truncate">{o.partyName || "Unknown Party"}</p>
+            <button className="font-medium text-sm truncate hover:text-primary hover:underline text-left" onClick={() => window.location.assign(`${window.location.pathname.replace(/\/outstandings$/, "")}/parties/${o.partyId}`)}>
+              {o.partyName || "Unknown Party"}
+            </button>
             <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${priority.bg} ${priority.color}`}>
               {priority.label}
             </span>
@@ -132,6 +146,9 @@ export default function OutstandingsPage() {
               <p className="text-xs text-emerald-600">+{formatCurrency(o.amountCollected)} paid</p>
             )}
           </div>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-blue-700 border-blue-200" onClick={() => { setPaymentItem(o); setPaymentAmount(String(o.amountDue)); setPaymentDate(new Date().toISOString().split("T")[0]); setPaymentNote(""); setPaymentOpen(true); }}>
+            <IndianRupee className="h-3.5 w-3.5" /> Pay
+          </Button>
           {o.partyMobile && (
             <a
               href={`https://wa.me/91${o.partyMobile.replace(/\D/g, "")}?text=${encodeURIComponent(`Namaste, ₹${o.amountDue.toLocaleString("en-IN")} payment reminder`)}`}
@@ -259,6 +276,61 @@ export default function OutstandingsPage() {
           ) : payables.map(o => <OutstandingCard key={o.id} o={o} />)}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-blue-600" />Record Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Party</Label>
+              <Input className="mt-1 h-8 text-sm" value={paymentItem?.partyName || ""} disabled />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Amount</Label>
+                <Input type="number" className="mt-1 h-8 text-sm" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Date</Label>
+                <Input type="date" className="mt-1 h-8 text-sm" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Note</Label>
+              <Textarea className="mt-1 text-sm" rows={3} value={paymentNote} onChange={e => setPaymentNote(e.target.value)} placeholder="Cash / UPI / Bank transfer" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setPaymentOpen(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={savingPayment || !paymentItem || !paymentAmount}
+              onClick={async () => {
+                if (!paymentItem) return;
+                setSavingPayment(true);
+                try {
+                  await apiPost(`/outstandings/${paymentItem.id}/status`, {
+                    status: "collected",
+                    amountCollected: Number(paymentAmount),
+                    paymentDate,
+                    note: paymentNote || null,
+                  });
+                  toast({ title: "Payment recorded!" });
+                  setPaymentOpen(false);
+                } catch (err: unknown) {
+                  toast({ title: "Error", description: err instanceof Error ? err.message : "Failed", variant: "destructive" });
+                } finally {
+                  setSavingPayment(false);
+                }
+              }}
+            >
+              {savingPayment ? "Saving..." : "Save Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
