@@ -30,11 +30,6 @@ router.post("/business", authMiddleware, async (req: AuthRequest, res) => {
     .where(eq(businessesTable.userId, req.userId!))
     .limit(1);
 
-  if (existing.length) {
-    res.status(409).json({ error: "Business already exists. Use PUT to update." });
-    return;
-  }
-
   const {
     businessName, businessType, city, state, gstin, upiId,
     preferredLanguage, existingSystem,
@@ -42,6 +37,27 @@ router.post("/business", authMiddleware, async (req: AuthRequest, res) => {
 
   if (!businessName) {
     res.status(400).json({ error: "Business name is required" });
+    return;
+  }
+
+  if (existing.length) {
+    const updated = await db
+      .update(businessesTable)
+      .set({
+        businessName,
+        businessType: businessType || existing[0].businessType,
+        city: city !== undefined ? city : existing[0].city,
+        state: state !== undefined ? state : existing[0].state,
+        gstin: gstin !== undefined ? gstin : existing[0].gstin,
+        upiId: upiId !== undefined ? upiId : existing[0].upiId,
+        preferredLanguage: preferredLanguage || existing[0].preferredLanguage,
+        existingSystem: existingSystem !== undefined ? existingSystem : existing[0].existingSystem,
+        updatedAt: new Date(),
+      })
+      .where(eq(businessesTable.id, existing[0].id))
+      .returning();
+
+    res.json(formatBusiness(updated[0]));
     return;
   }
 
@@ -57,7 +73,6 @@ router.post("/business", authMiddleware, async (req: AuthRequest, res) => {
     existingSystem,
   }).returning();
 
-  // Create default Manual Parchi data source
   await db.insert(dataSourcesTable).values({
     userId: req.userId!,
     businessId: inserted[0].id,
