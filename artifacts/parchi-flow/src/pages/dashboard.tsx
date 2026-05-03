@@ -10,7 +10,7 @@ import {
   TrendingUp, TrendingDown, AlertTriangle, RefreshCw,
   Users, ArrowUpRight, ArrowDownRight, Plus, MessageCircle,
   Clock, BarChart3, ChevronRight, IndianRupee, Package, ReceiptText,
-  Sparkles, Eye, Target,
+  Sparkles, Eye, Target, ArrowRight, ShieldCheck, FileText, Bell,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -33,6 +33,15 @@ interface DashboardData {
 interface TrendsData { months: { month: string; inflow: number; outflow: number; net: number }[] }
 interface ItemsData { items: { id: number; name: string; isLowStock: boolean; stockQty: number; salePrice: number }[]; lowStockCount: number }
 interface BusinessesData { business: { id: number; businessName: string; city: string | null; state: string | null; gstin: string | null } | null; businesses: { id: number; businessName: string; city: string | null; state: string | null; gstin: string | null }[] }
+
+const quickDrills = [
+  { href: "/parties", title: "Party master", desc: "Search, open, and inspect ledger", icon: Users },
+  { href: "/outstandings", title: "Collections", desc: "Check aging and follow-ups", icon: Clock },
+  { href: "/follow-ups", title: "Follow-ups", desc: "See due, overdue, and next steps", icon: Bell },
+  { href: "/reconciliation", title: "Reconciliation", desc: "Find mismatches and approve", icon: RefreshCw },
+  { href: "/invoices", title: "Invoices", desc: "Drill into billing status", icon: FileText },
+  { href: "/reports", title: "Reports", desc: "Understand trends and impact", icon: BarChart3 },
+];
 
 function StatCard({ title, value, sub, icon: Icon, trend, color = "default", href }: {
   title: string; value: string; sub?: string; icon: React.ElementType;
@@ -179,6 +188,34 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-amber-600" />Why it matters</div>
               <p className="text-xs text-muted-foreground mt-1">Every completed follow-up and reconciliation improves collection speed and score visibility.</p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-200">
+        <CardContent className="pt-4 pb-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold">Drill-down shortcuts</p>
+              <p className="text-xs text-muted-foreground">Open the exact screen users usually need next.</p>
+            </div>
+            <span className="text-xs text-muted-foreground">Fewer taps</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {quickDrills.map(d => (
+              <Link key={d.href} href={d.href}>
+                <div className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/40 transition-colors">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <d.icon className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{d.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{d.desc}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                </div>
+              </Link>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -363,7 +400,8 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y">
                 {data.topDebtors.map((debtor, i) => (
-                  <div key={debtor.partyId} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
+                  <Link key={debtor.partyId} href={`/parties/${debtor.partyId}`}>
+                    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{i + 1}</div>
                       <div className="min-w-0">
@@ -380,7 +418,8 @@ export default function DashboardPage() {
                         </a>
                       )}
                     </div>
-                  </div>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -406,26 +445,40 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y">
                 {data.recentActivity.slice(0, 7).map(event => (
-                  <div key={event.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${event.direction === "inflow" ? "bg-emerald-50" : "bg-red-50"}`}>
-                        {event.direction === "inflow" ? <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" /> : <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />}
+                  <Link key={event.id} href="/audit">
+                    <div className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${event.direction === "inflow" ? "bg-emerald-50" : "bg-red-50"}`}>
+                          {event.direction === "inflow" ? <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" /> : <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{event.narration || event.eventType.replace(/_/g, " ")}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(event.eventDate)}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{event.narration || event.eventType.replace(/_/g, " ")}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(event.eventDate)}</p>
-                      </div>
+                      <span className={`text-sm font-semibold flex-shrink-0 ${event.direction === "inflow" ? "text-emerald-600" : "text-red-500"}`}>
+                        {event.direction === "inflow" ? "+" : "-"}{formatCurrency(event.amount)}
+                      </span>
                     </div>
-                    <span className={`text-sm font-semibold flex-shrink-0 ${event.direction === "inflow" ? "text-emerald-600" : "text-red-500"}`}>
-                      {event.direction === "inflow" ? "+" : "-"}{formatCurrency(event.amount)}
-                    </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-dashed border-emerald-300 bg-emerald-50/40">
+        <CardContent className="pt-4 pb-4 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="font-semibold text-emerald-900">Launch-ready drill-down flow</p>
+            <p className="text-sm text-emerald-900/75">One tap from dashboard to parties, collections, follow-ups, audit trail, and reports.</p>
+          </div>
+          <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+            <Link href="/follow-ups"><ShieldCheck className="h-4 w-4 mr-1.5" />Open follow-up hub</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {[
