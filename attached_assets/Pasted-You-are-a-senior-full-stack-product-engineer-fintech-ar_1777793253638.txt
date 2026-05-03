@@ -1,0 +1,2151 @@
+You are a senior full-stack product engineer, fintech architect, SME accounting workflow expert, reconciliation system designer, UX designer, and SaaS product builder.
+
+Build a complete, working, mobile-first web application called “ParchiFlow”.
+
+ParchiFlow is a Universal SME Ledger Intelligence, Collection Automation, and Reconciliation OS for Indian SMEs.
+
+The product should help small retailers, wholesalers, traders, service businesses, contractors, manufacturers, distributors, pharmacies, local vendors, and unorganized SMEs convert messy business money data into one simple dashboard.
+
+The users may currently operate through:
+- Paper parchi
+- Bahi-khata
+- Memory
+- Verbal credit
+- WhatsApp messages
+- Excel sheets
+- Bank statements
+- UPI payments
+- Tally
+- BUSY
+- Marg
+- Accountant-managed ledgers
+
+The product should answer the business owner’s most important questions:
+
+1. Kis se kitna lena hai?
+2. Kis ko kitna dena hai?
+3. Kaun overdue hai?
+4. Kaun payment promise karke nahi de raha?
+5. Kaunsa payment receive hua but match nahi hua?
+6. Kaunsa transaction duplicate lag raha hai?
+7. Kaunsa transaction doubtful hai?
+8. Kisko WhatsApp reminder bhejna hai?
+9. Aaj kitna collect hua?
+10. Mere Tally/BUSY/Marg/Excel data ka simple mobile view kya hai?
+
+This is NOT traditional accounting software.
+This is NOT another Tally.
+This is NOT only a Khatabook clone.
+This is NOT only a CredFlow clone.
+This is NOT only a Biz Analyst clone.
+
+This is:
+
+Digital Parchi
++ Party Ledger
++ Accounting Software Import Layer
++ Bank/UPI Money Signal Layer
++ Reconciliation Engine
++ WhatsApp Reminder Layer
++ Collection CRM
++ Owner Control Room
+
+The system should feel like:
+Khatabook simplicity
++ OkCredit trust ledger
++ Biz Analyst style ledger visibility
++ CredFlow style collections
++ Bank/UPI reconciliation
++ Parchi-to-organized SME workflow.
+
+========================
+PRODUCT PRINCIPLES
+========================
+
+1. Zero accounting knowledge required.
+2. Mobile-first.
+3. Every core action should take less than 5 seconds.
+4. Use simple Indian SME language:
+   - Lena Hai
+   - Dena Hai
+   - Paisa Mila
+   - Paisa Diya
+   - Udhaar Diya
+   - Advance Liya
+   - Advance Diya
+   - Follow-up
+   - Reminder
+   - Doubtful
+   - Match Karna Hai
+5. Avoid heavy accounting jargon in the frontend.
+6. Backend may use proper accounting logic, but UI must remain simple.
+7. Never blindly update final ledger for doubtful transactions.
+8. Every imported or detected money event must pass through matching and reconciliation logic.
+9. Manual parchi, accounting software data, bank/UPI data, WhatsApp proof, and payment gateway data should all become “money events”.
+10. The final ledger should update only after:
+    - High-confidence auto-match, or
+    - User confirmation, or
+    - Manual approval.
+11. MVP must be honest:
+    - Real Tally/BUSY/Marg live sync may require connector/API/local agent.
+    - SMS/notification reading requires native app and permissions.
+    - WhatsApp automation requires WhatsApp Business API approval.
+    - Payment auto-settlement requires payment gateway integration.
+12. Build a working MVP, not a design mockup.
+
+========================
+TECH STACK
+========================
+
+Build using:
+
+Frontend:
+- React
+- Vite
+- Tailwind CSS
+- Mobile-first responsive UI
+
+Backend:
+- Node.js
+- Express.js
+
+Database:
+- PostgreSQL
+- Prisma ORM
+
+Authentication:
+- Mobile number login
+- Mock OTP for MVP: 123456
+- JWT/session-based authentication
+
+File Upload:
+- CSV upload
+- Excel upload
+- Bank statement CSV upload
+- Optional PDF/image placeholder for future
+
+Future-ready integrations:
+- Tally XML over HTTP connector architecture
+- Tally ODBC/local connector architecture placeholder
+- BUSY API connector architecture placeholder
+- Marg API connector architecture placeholder
+- Razorpay/PhonePe payment link/webhook architecture placeholder
+- WhatsApp click-to-chat in MVP
+- WhatsApp Business API future placeholder
+- SMS/notification parser future Android app placeholder
+
+Deployment:
+- Must run fully on Replit
+- Provide clear run instructions
+
+========================
+CORE PRODUCT ARCHITECTURE
+========================
+
+Use modular architecture:
+
+/frontend
+/backend
+/backend/routes
+/backend/controllers
+/backend/services
+/backend/services/parchi-parser
+/backend/services/ledger-normalizer
+/backend/services/outstanding-engine
+/backend/services/reconciliation-engine
+/backend/services/reminder-engine
+/backend/services/payment-matching-engine
+/backend/services/dashboard-engine
+/backend/services/import-engine
+/backend/services/sync-engine
+/backend/connectors
+/backend/connectors/tally
+/backend/connectors/busy
+/backend/connectors/marg
+/backend/connectors/csv
+/backend/connectors/excel
+/backend/connectors/bank
+/backend/connectors/payment-gateway
+/backend/utils
+/prisma
+
+The most important backend services are:
+
+1. Ledger Normalizer
+2. Outstanding Engine
+3. Reconciliation Engine
+4. Payment Matching Engine
+5. Reminder Engine
+6. Import Engine
+7. Dashboard Engine
+
+========================
+HIGH-LEVEL WORKFLOW
+========================
+
+The complete product workflow is:
+
+1. User logs in with mobile number.
+2. User creates business profile.
+3. User selects data source:
+   - Manual parchi
+   - Excel
+   - CSV
+   - Bank statement
+   - Tally
+   - BUSY
+   - Marg
+   - Payment gateway
+4. User adds/imports data.
+5. System converts all incoming data into universal money events.
+6. System normalizes money events into:
+   - Parties
+   - Ledger entries
+   - Outstandings
+   - Payments
+7. System checks:
+   - Duplicate transaction
+   - Duplicate party
+   - Unknown party
+   - UTR/reference match
+   - Invoice match
+   - Amount match
+   - Date match
+   - Source conflict
+   - Suspicious/doubtful transaction
+8. System assigns confidence score.
+9. If high confidence, auto-match but log it.
+10. If medium/low confidence, send to reconciliation queue.
+11. User reviews reconciliation queue.
+12. Confirmed transactions update:
+   - Party ledger
+   - Outstanding
+   - Dashboard
+   - Follow-up list
+13. User sends WhatsApp reminder.
+14. User records payment or imports bank/UPI payment.
+15. System matches payment with outstanding.
+16. Dashboard updates.
+17. Reports become available.
+
+========================
+DATABASE DESIGN
+========================
+
+Create Prisma schema for the following tables.
+
+users:
+- id
+- name
+- mobile
+- email nullable
+- password_hash nullable
+- created_at
+- updated_at
+
+businesses:
+- id
+- user_id
+- business_name
+- business_type
+  - retail
+  - wholesale
+  - service
+  - contractor
+  - manufacturer
+  - distributor
+  - pharmacy
+  - other
+- city nullable
+- state nullable
+- gstin nullable
+- upi_id nullable
+- preferred_language
+  - english
+  - hindi
+  - hinglish
+- created_at
+- updated_at
+
+user_roles:
+- id
+- user_id
+- business_id
+- role
+  - owner
+  - accountant
+  - collection_staff
+  - viewer
+- created_at
+- updated_at
+
+data_sources:
+- id
+- user_id
+- business_id
+- source_type
+  - manual
+  - excel
+  - csv
+  - bank_statement
+  - tally
+  - busy
+  - marg
+  - payment_gateway
+  - whatsapp_manual
+  - sms_manual
+  - email_manual
+  - other
+- source_name
+- connection_status
+  - not_connected
+  - connected
+  - failed
+  - sync_pending
+  - mock_connected
+  - import_only
+- config_json nullable
+- last_sync_at nullable
+- created_at
+- updated_at
+
+parties:
+- id
+- user_id
+- business_id
+- source_id nullable
+- external_party_id nullable
+- name
+- normalized_name
+- mobile nullable
+- email nullable
+- gstin nullable
+- type
+  - customer
+  - vendor
+  - both
+  - unknown
+- address nullable
+- city nullable
+- state nullable
+- opening_balance
+- opening_balance_type
+  - receivable
+  - payable
+  - none
+- current_balance
+- balance_type
+  - receivable
+  - payable
+  - settled
+- credit_limit nullable
+- risk_score nullable
+- duplicate_group_id nullable
+- created_at
+- updated_at
+
+party_merge_logs:
+- id
+- business_id
+- primary_party_id
+- merged_party_id
+- reason
+- created_at
+
+money_events:
+- id
+- user_id
+- business_id
+- source_id nullable
+- source_type
+- event_type
+  - manual_parchi
+  - imported_invoice
+  - imported_payment
+  - bank_credit
+  - bank_debit
+  - upi_credit
+  - upi_debit
+  - payment_gateway_success
+  - payment_gateway_failed
+  - whatsapp_payment_claim
+  - whatsapp_promise_to_pay
+  - sms_credit
+  - sms_debit
+  - expense
+  - adjustment
+  - reversal
+  - refund
+  - cheque_bounce
+  - unknown
+- raw_input nullable
+- raw_payload_json nullable
+- amount
+- direction
+  - inflow
+  - outflow
+  - neutral
+- event_date
+- party_id nullable
+- suggested_party_id nullable
+- reference_number nullable
+- utr nullable
+- invoice_number nullable
+- voucher_number nullable
+- narration nullable
+- checksum nullable
+- confidence_score
+- reconciliation_status
+  - auto_matched
+  - pending_review
+  - possible_duplicate
+  - unmatched
+  - suspense
+  - verification_pending
+  - disputed
+  - partially_matched
+  - split_required
+  - merged
+  - ignored
+  - reversed
+  - confirmed
+- created_at
+- updated_at
+
+ledger_entries:
+- id
+- user_id
+- business_id
+- source_id nullable
+- money_event_id nullable
+- party_id nullable
+- external_entry_id nullable
+- entry_type
+  - sales_invoice
+  - purchase_invoice
+  - payment_received
+  - payment_made
+  - credit_note
+  - debit_note
+  - journal
+  - advance_received
+  - advance_paid
+  - expense
+  - adjustment
+  - parchi_entry
+  - refund
+  - reversal
+  - cheque_bounce
+- voucher_number nullable
+- invoice_number nullable
+- amount
+- debit_amount nullable
+- credit_amount nullable
+- entry_date
+- due_date nullable
+- narration nullable
+- raw_input nullable
+- raw_payload_json nullable
+- status
+  - draft
+  - open
+  - partially_settled
+  - settled
+  - cancelled
+  - disputed
+- reconciliation_status
+- checksum nullable
+- created_at
+- updated_at
+
+outstandings:
+- id
+- user_id
+- business_id
+- party_id
+- ledger_entry_id nullable
+- original_amount
+- amount_due
+- amount_collected
+- due_date nullable
+- aging_days
+- aging_bucket
+  - not_due
+  - due_today
+  - overdue_1_7
+  - overdue_8_15
+  - overdue_16_30
+  - overdue_31_60
+  - overdue_60_plus
+- status
+  - open
+  - partially_collected
+  - collected
+  - disputed
+  - written_off
+  - verification_pending
+- priority
+  - low
+  - medium
+  - high
+  - critical
+- last_follow_up_at nullable
+- next_follow_up_at nullable
+- created_at
+- updated_at
+
+payments:
+- id
+- user_id
+- business_id
+- party_id nullable
+- money_event_id nullable
+- outstanding_id nullable
+- amount
+- payment_date
+- payment_mode
+  - cash
+  - upi
+  - bank
+  - cheque
+  - card
+  - wallet
+  - payment_gateway
+  - other
+- reference_number nullable
+- utr nullable
+- note nullable
+- match_status
+  - matched
+  - unmatched
+  - partial
+  - duplicate
+  - verification_pending
+- created_at
+- updated_at
+
+payment_allocations:
+- id
+- business_id
+- payment_id
+- outstanding_id
+- allocated_amount
+- created_at
+
+reconciliation_queue:
+- id
+- user_id
+- business_id
+- money_event_id nullable
+- ledger_entry_id nullable
+- payment_id nullable
+- source_type
+- issue_type
+  - possible_duplicate
+  - unmatched_credit
+  - unmatched_debit
+  - amount_mismatch
+  - date_mismatch
+  - party_mismatch
+  - invoice_mismatch
+  - utr_duplicate
+  - reference_duplicate
+  - screenshot_without_bank_credit
+  - bank_credit_without_party
+  - payment_gateway_duplicate
+  - manual_and_bank_overlap
+  - tally_and_excel_overlap
+  - opening_balance_difference
+  - reversal_detected
+  - refund_detected
+  - cheque_bounce
+  - disputed_transaction
+  - split_required
+  - excess_payment
+  - short_payment
+  - unknown_expense
+  - duplicate_party
+- confidence_score
+- suggested_party_id nullable
+- suggested_ledger_entry_id nullable
+- suggested_outstanding_id nullable
+- duplicate_transaction_id nullable
+- reason
+- suggested_action
+- user_action nullable
+  - confirm_match
+  - merge_duplicate
+  - keep_separate
+  - assign_party
+  - create_new_party
+  - split_payment
+  - mark_partial
+  - mark_disputed
+  - mark_suspense
+  - ignore_transaction
+  - reverse_transaction
+  - adjust_balance
+- status
+  - pending
+  - resolved
+  - ignored
+  - escalated
+- created_at
+- resolved_at nullable
+
+follow_ups:
+- id
+- user_id
+- business_id
+- party_id
+- outstanding_id nullable
+- assigned_to_user_id nullable
+- follow_up_type
+  - whatsapp
+  - call
+  - sms
+  - email
+  - visit
+  - manual
+- status
+  - pending
+  - completed
+  - snoozed
+  - failed
+  - promised
+  - disputed
+- note nullable
+- promised_payment_date nullable
+- promised_amount nullable
+- next_follow_up_at nullable
+- created_at
+- updated_at
+
+reminder_logs:
+- id
+- user_id
+- business_id
+- party_id
+- outstanding_id nullable
+- channel
+  - whatsapp_click_to_chat
+  - sms_manual
+  - email_manual
+  - call
+  - manual
+- template_type
+  - soft
+  - firm
+  - final
+  - thank_you
+  - balance_confirmation
+  - statement_share
+  - promise_followup
+- message
+- sent_status
+  - generated
+  - copied
+  - opened_whatsapp
+  - sent_mock
+  - failed
+- sent_at nullable
+- created_at
+
+import_jobs:
+- id
+- user_id
+- business_id
+- source_id
+- import_type
+  - csv
+  - excel
+  - bank_csv
+  - tally_xml
+  - tally_excel
+  - busy_excel
+  - marg_excel
+  - payment_gateway_mock
+- status
+  - pending
+  - processing
+  - preview_ready
+  - completed
+  - failed
+  - rolled_back
+- total_records
+- successful_records
+- failed_records
+- error_log_json nullable
+- mapping_json nullable
+- created_at
+- updated_at
+
+sync_logs:
+- id
+- user_id
+- business_id
+- source_id
+- sync_type
+  - manual
+  - scheduled
+  - webhook
+  - connector
+  - import
+- status
+  - success
+  - failed
+  - partial
+- message
+- records_synced
+- created_at
+
+audit_logs:
+- id
+- user_id nullable
+- business_id
+- action
+- entity_type
+- entity_id
+- before_json nullable
+- after_json nullable
+- created_at
+
+========================
+MODULE 1: AUTHENTICATION
+========================
+
+Build:
+- Login screen
+- Mobile number input
+- OTP input
+- Mock OTP: 123456
+- User session
+- Business setup redirect if no business exists
+
+Screens:
+1. Login
+2. OTP Verification
+3. Business Setup
+4. Dashboard
+
+========================
+MODULE 2: BUSINESS SETUP
+========================
+
+Ask user:
+- Business name
+- Business type
+- City
+- State
+- GSTIN optional
+- UPI ID optional
+- Preferred language:
+  - English
+  - Hindi
+  - Hinglish
+- Existing system:
+  - No software / Parchi only
+  - Excel
+  - Tally
+  - BUSY
+  - Marg
+  - Other
+
+After setup, create default data source:
+- Manual Parchi
+
+========================
+MODULE 3: DATA SOURCE MANAGEMENT
+========================
+
+Create “Connect Data” screen.
+
+Show cards:
+
+1. Manual Parchi
+2. Excel Upload
+3. CSV Upload
+4. Bank Statement Upload
+5. Tally
+6. BUSY
+7. Marg
+8. Payment Gateway
+9. WhatsApp Manual Input
+10. SMS Manual Input
+
+Each card should show:
+- Status
+- What data can be imported
+- MVP support level
+- Action button
+
+Support level examples:
+- Fully available
+- Import available
+- Mock connector
+- Future connector
+- Native app required
+
+Important:
+Do not pretend live integrations are complete.
+For Tally/BUSY/Marg in MVP, build:
+- Configuration screen
+- Mock connector
+- Sample import
+- Export file import
+- Future connector-ready architecture
+
+========================
+MODULE 4: MANUAL PARCHI ENTRY
+========================
+
+Create global floating “+ Add Parchi” button.
+
+Two modes:
+
+Mode 1: Smart Text Entry
+User can type:
+- Ramesh se 5000 advance liya
+- Suresh ko 12000 ka maal udhaar diya
+- Amit se 3000 payment mila
+- Rajesh vendor ko 7000 diya
+- Gupta ji ko 5000 advance diya
+- Petrol kharcha 1200
+- Ramesh se 2000 part payment mila
+- Mohan ko 5000 dena hai
+- Customer Ravi ko service di 8500 udhaar
+- Kal Ramesh 10000 dene wala hai
+
+System should parse:
+- Party name
+- Amount
+- Transaction type
+- Direction
+- Date if mentioned
+- Due date/promise date if mentioned
+- Note
+
+Mode 2: Button Entry
+Large buttons:
+- Paisa Mila
+- Paisa Diya
+- Maal/Service Udhaar Diya
+- Advance Liya
+- Advance Diya
+- Kharcha
+- Adjustment
+- Promise-to-Pay
+- Dispute
+- Payment Claim
+
+After save:
+- Create money_event
+- Run reconciliation checks
+- If clear, create ledger entry
+- If doubtful, send to reconciliation queue
+
+========================
+MODULE 5: PARCHI PARSER
+========================
+
+Build rule-based parser for Hindi/Hinglish/English.
+
+Recognize keywords:
+
+Payment received:
+- mila
+- received
+- payment mila
+- diye
+- se liye
+- paid by
+- receive hua
+
+Payment made:
+- diya
+- paid
+- ko diya
+- payment kiya
+- transfer kiya
+
+Credit sale:
+- maal diya
+- udhaar diya
+- service di
+- credit sale
+- maal bheja
+
+Advance received:
+- advance liya
+- booking amount liya
+- advance received
+
+Advance paid:
+- advance diya
+- advance paid
+
+Expense:
+- kharcha
+- expense
+- petrol
+- rent
+- salary
+- labour
+- transport
+
+Promise-to-pay:
+- kal dunga
+- kal dega
+- promise
+- payment date
+- next week
+- monday
+- kal bhejunga
+
+Dispute:
+- amount galat
+- dispute
+- nahi maana
+- wrong amount
+- disagreement
+
+Always show parsed confirmation before saving:
+“We understood: Suresh ko ₹12,000 ka maal udhaar diya. Iska matlab ₹12,000 lena hai.”
+
+Allow user to edit before saving.
+
+========================
+MODULE 6: EXCEL / CSV / BANK STATEMENT IMPORT
+========================
+
+Build import workflow:
+
+1. Upload file
+2. Detect columns
+3. Show column mapping screen
+4. User maps fields
+5. Preview first 10 records
+6. Validate records
+7. Create import job
+8. Convert rows into money_events
+9. Normalize into parties, ledger_entries, outstandings, payments
+10. Send doubtful rows to reconciliation queue
+
+Supported column mappings:
+- Party Name
+- Mobile
+- GSTIN
+- Voucher Date
+- Invoice Number
+- Voucher Number
+- Narration
+- Debit
+- Credit
+- Amount
+- Balance
+- Balance Type
+- Due Date
+- UTR
+- Reference Number
+- Bank Narration
+- Source
+
+For bank statement:
+Detect:
+- Credit
+- Debit
+- Amount
+- Date
+- Narration
+- UTR
+- UPI reference
+- Bank reference
+
+Bank statement workflow:
+- Credits become potential payment received
+- Debits become potential payment made/expense/vendor payment
+- Unknown credits become suspense
+- Unknown debits become unmatched debit
+- Matching engine suggests party/outstanding
+
+========================
+MODULE 7: TALLY CONNECTOR ARCHITECTURE
+========================
+
+Build Tally connector module.
+
+For MVP:
+- Tally settings screen:
+  - Company name
+  - Host
+  - Port default 9000
+  - Integration type:
+    - Excel import
+    - XML sample import
+    - Mock sync
+    - Future local connector
+- Add sample XML parser
+- Add mock Tally data
+- Normalize Tally ledgers, vouchers, bills receivable, bills payable into universal ledger format
+
+Do not require real live Tally connection for MVP.
+Show note:
+“Live Tally sync may require local connector, Tally HTTP/XML configuration, ODBC, or exported files.”
+
+Tally imported data should create:
+- Parties
+- Ledger entries
+- Outstandings
+- Payments if available
+- Sync logs
+
+========================
+MODULE 8: BUSY CONNECTOR ARCHITECTURE
+========================
+
+Build BUSY connector module.
+
+For MVP:
+- BUSY settings screen:
+  - API base URL
+  - API key
+  - Company ID
+  - Import file upload
+  - Mock sync
+- Mock BUSY JSON data
+- Normalize customers, vendors, invoices, receipts, payments, outstanding balances
+
+Do not hardcode BUSY permanently.
+Use adapter pattern.
+
+========================
+MODULE 9: MARG CONNECTOR ARCHITECTURE
+========================
+
+Build Marg connector module.
+
+For MVP:
+- Marg settings screen:
+  - API base URL
+  - API key
+  - Company ID
+  - Import file upload
+  - Mock sync
+- Mock Marg JSON data
+- Normalize bills, invoices, orders, stock placeholder, collections, outstandings, parties
+
+Use adapter pattern.
+
+========================
+MODULE 10: UNIVERSAL LEDGER NORMALIZER
+========================
+
+Build ledgerNormalizer service.
+
+It should convert every source into universal structures.
+
+Input sources:
+- Manual parchi
+- Excel
+- CSV
+- Bank statement
+- Tally
+- BUSY
+- Marg
+- SMS manual paste
+- WhatsApp manual note
+- Payment gateway mock
+
+Output:
+UniversalParty:
+- name
+- mobile
+- gstin
+- type
+- external_party_id
+- source_id
+
+UniversalMoneyEvent:
+- event_type
+- amount
+- direction
+- event_date
+- party_name
+- reference_number
+- utr
+- invoice_number
+- voucher_number
+- narration
+- source_type
+- raw_payload_json
+
+UniversalLedgerEntry:
+- party_id
+- entry_type
+- amount
+- debit_amount
+- credit_amount
+- entry_date
+- due_date
+- voucher_number
+- invoice_number
+- narration
+- source_type
+- external_entry_id
+
+UniversalOutstanding:
+- party_id
+- amount_due
+- original_amount
+- due_date
+- aging_days
+- aging_bucket
+- source_type
+- invoice_number
+- voucher_number
+
+========================
+MODULE 11: PARTY MANAGEMENT
+========================
+
+Features:
+- Add party
+- Edit party
+- Search party
+- View party
+- Duplicate party suggestion
+- Merge parties
+- Party source display
+- Customer/vendor/both classification
+
+Party list should show:
+- Name
+- Mobile
+- Source
+- Balance
+- Badge:
+  - Lena Hai
+  - Dena Hai
+  - Settled
+  - Review Needed
+
+Duplicate party logic:
+Check:
+- Same GSTIN
+- Same mobile
+- Similar name
+- Similar address
+- Same external ID
+- Same opening balance
+
+Show possible duplicates:
+“Ramesh Store and Ramesh Stores may be same. Merge?”
+
+========================
+MODULE 12: PARTY LEDGER
+========================
+
+Party ledger screen should show:
+
+Header:
+- Party name
+- Mobile
+- GSTIN
+- Source
+- Current balance
+- Lena Hai / Dena Hai / Settled / Review
+
+Summary:
+- Total invoices
+- Total payments received
+- Total payable
+- Total overdue
+- Last follow-up
+- Next follow-up
+- Risk score
+
+Timeline:
+- Invoice
+- Payment received
+- Payment made
+- Advance
+- Expense
+- Adjustment
+- Parchi entry
+- Bank credit
+- UPI credit
+- WhatsApp claim
+- Reversal/refund
+
+Actions:
+- Add Parchi
+- Record Payment
+- Send WhatsApp Reminder
+- Share Statement
+- Balance Confirmation
+- Add Follow-up Note
+- Mark Dispute
+- Mark Promise-to-Pay
+- Export Statement
+
+========================
+MODULE 13: OUTSTANDING ENGINE
+========================
+
+Build outstanding engine.
+
+For every confirmed receivable/payable:
+- Create outstanding
+- Calculate amount due
+- Track amount collected
+- Calculate aging
+- Assign bucket
+- Assign priority
+
+Aging buckets:
+- Not due
+- Due today
+- 1–7 days overdue
+- 8–15 days overdue
+- 16–30 days overdue
+- 31–60 days overdue
+- 60+ days overdue
+
+Priority rules:
+High priority if:
+- Large amount
+- Aging high
+- Multiple reminders sent
+- Promise broken
+- Customer disputed earlier
+- No payment received recently
+
+========================
+MODULE 14: PAYMENT MATCHING ENGINE
+========================
+
+Build paymentMatchingEngine.
+
+When a payment signal comes from:
+- Manual entry
+- Bank statement
+- UPI narration
+- SMS manual paste
+- Payment gateway mock
+- WhatsApp payment claim
+
+System should attempt to match with:
+- Party
+- Invoice
+- Outstanding
+- Amount
+- UTR/reference
+- Date
+- Narration
+- Mobile/GSTIN
+
+Matching score:
+- Same UTR/reference: +50
+- Same invoice number: +40
+- Same party mobile/GSTIN: +25
+- Same amount: +20
+- Date within 1 day: +15
+- Narration keyword match: +10
+- Same external source ID: +50
+
+Decision:
+- 85–100: Auto-match but log it
+- 60–84: Suggested match, user confirmation required
+- 30–59: Reconciliation queue
+- 0–29: Suspense/unmatched
+
+Payment cases:
+- Exact payment
+- Partial payment
+- Excess payment
+- Short payment
+- Unknown credit
+- Duplicate payment
+- Gateway + bank duplicate
+- Screenshot claim but no bank credit
+- Cash payment manually entered
+- Cheque pending
+- Cheque bounced
+- Refund/reversal
+
+========================
+MODULE 15: RECONCILIATION ENGINE
+========================
+
+This is one of the most important modules.
+
+No doubtful transaction should directly update final ledger without review.
+
+Every incoming money event must pass through:
+
+1. Source identification
+2. Duplicate detection
+3. Party matching
+4. Invoice/outstanding matching
+5. Amount matching
+6. Date matching
+7. UTR/reference matching
+8. Confidence scoring
+9. Reconciliation status assignment
+10. User confirmation if required
+
+Reconciliation statuses:
+- auto_matched
+- pending_review
+- possible_duplicate
+- unmatched
+- suspense
+- verification_pending
+- disputed
+- partially_matched
+- split_required
+- merged
+- ignored
+- reversed
+- confirmed
+
+Issue types:
+- possible_duplicate
+- unmatched_credit
+- unmatched_debit
+- amount_mismatch
+- date_mismatch
+- party_mismatch
+- invoice_mismatch
+- utr_duplicate
+- reference_duplicate
+- screenshot_without_bank_credit
+- bank_credit_without_party
+- payment_gateway_duplicate
+- manual_and_bank_overlap
+- tally_and_excel_overlap
+- opening_balance_difference
+- reversal_detected
+- refund_detected
+- cheque_bounce
+- disputed_transaction
+- split_required
+- excess_payment
+- short_payment
+- unknown_expense
+- duplicate_party
+
+User actions:
+- Confirm match
+- Merge duplicate
+- Keep separate
+- Assign party
+- Create new party
+- Split payment
+- Mark partial
+- Mark disputed
+- Mark suspense
+- Ignore transaction
+- Reverse transaction
+- Adjust balance
+
+Reconciliation dashboard tabs:
+1. Pending Review
+2. Possible Duplicates
+3. Suspense Credits
+4. Suspense Debits
+5. Verification Pending
+6. Disputed
+7. Reversals / Refunds
+8. Resolved
+
+For each item show:
+- Source
+- Party suggested
+- Amount
+- Date
+- Reference/UTR
+- Confidence score
+- Reason for flag
+- Suggested action
+- Buttons:
+  - Confirm
+  - Merge
+  - Split
+  - Assign Party
+  - Mark Dispute
+  - Ignore
+  - Keep Separate
+
+Ledger, outstanding, dashboard, and follow-up should update only after transaction is confirmed, auto-matched, or manually approved.
+
+========================
+MODULE 16: RECONCILIATION EDGE CASES
+========================
+
+Handle these edge cases:
+
+Duplicate cases:
+- Same UTR already exists
+- Same invoice imported from Tally and Excel
+- Same amount/date/party entered manually and from bank
+- Payment gateway webhook and bank credit both appear
+- Staff and owner both record same payment
+- WhatsApp screenshot later matched with bank credit
+- Same party with spelling variation
+
+Doubtful cases:
+- Amount received but payer unknown
+- Customer says paid but no bank credit
+- Bank credit received but no invoice due
+- Payment amount does not match invoice
+- Same UPI reference appears twice
+- Date mismatch between bank and ledger
+- Cash payment entered without party
+- Expense without category
+- Vendor payment without bill
+- Cheque deposited but not cleared
+- Cheque bounced later
+- Payment reversed/refunded
+- GST invoice cancelled but ledger still open
+- Credit note exists against invoice
+- Debit note exists against vendor
+- Opening balance differs across sources
+
+Matching outcomes:
+- Auto matched
+- Suggested match
+- Partial match
+- Split required
+- Suspense
+- Duplicate
+- Dispute
+- Ignored
+- Reversed
+
+========================
+MODULE 17: WHATSAPP REMINDER ENGINE
+========================
+
+Build WhatsApp click-to-chat reminder system for MVP.
+
+No paid WhatsApp API integration in MVP.
+
+Features:
+- Generate message
+- Copy message
+- Open WhatsApp link
+- Log reminder
+- Mark follow-up completed
+- Add next follow-up date
+- Add promised payment date
+- Add promised amount
+
+Templates:
+
+Soft Reminder:
+“Namaste {{party_name}} ji, hamare hisaab se ₹{{amount}} payment pending hai. Kripya payment update kar dein. - {{business_name}}”
+
+Firm Reminder:
+“Namaste {{party_name}} ji, ₹{{amount}} ka payment overdue hai. Kripya aaj payment kar dein ya payment date confirm karein. - {{business_name}}”
+
+Final Reminder:
+“Namaste {{party_name}} ji, baar-baar follow-up ke baad bhi ₹{{amount}} pending hai. Kripya turant payment karein ya final date confirm karein. - {{business_name}}”
+
+Balance Confirmation:
+“Namaste {{party_name}} ji, hamare record ke hisaab se ₹{{amount}} pending hai. Kripya confirm karein ki balance sahi hai. - {{business_name}}”
+
+Statement Share:
+“Namaste {{party_name}} ji, aapka statement share kar rahe hain. Closing balance ₹{{amount}} hai. Kripya verify karein. - {{business_name}}”
+
+Thank You:
+“Dhanyavaad {{party_name}} ji, payment receive ho gaya hai. - {{business_name}}”
+
+Use wa.me link:
+https://wa.me/91{{mobile}}?text={{encoded_message}}
+
+========================
+MODULE 18: COLLECTION CRM
+========================
+
+Build follow-up screen.
+
+Tabs:
+- Due Today
+- Overdue
+- Promised Today
+- High Priority
+- Disputed
+- Verification Pending
+- All Follow-ups
+
+Each follow-up card:
+- Party name
+- Amount
+- Aging
+- Mobile
+- Last reminder
+- Next follow-up
+- Promise date
+- Assigned staff
+- Status
+
+Buttons:
+- WhatsApp
+- Call
+- Record Payment
+- Snooze
+- Add Note
+- Mark Promise
+- Mark Dispute
+- Mark Verification Pending
+
+Follow-up note options:
+- Spoke to customer
+- Payment promised
+- No response
+- Dispute
+- Part payment received
+- Wrong contact
+- Follow-up later
+- Payment claimed but not verified
+
+========================
+MODULE 19: PAYMENT RECORDING
+========================
+
+Allow user to record payment received or payment made.
+
+Fields:
+- Party
+- Amount
+- Date
+- Mode:
+  - Cash
+  - UPI
+  - Bank
+  - Cheque
+  - Card
+  - Wallet
+  - Other
+- UTR/reference
+- Note
+- Allocate to outstanding:
+  - Auto suggestion
+  - Manual allocation
+  - Split across invoices
+
+After payment:
+- Create money_event
+- Run payment matching
+- Update outstanding only if confirmed
+- Update party ledger
+- Update dashboard
+- Close follow-up if fully paid
+- Generate thank-you WhatsApp message
+
+========================
+MODULE 20: UPI / BANK / SMS / WHATSAPP MONEY SIGNALS
+========================
+
+Build MVP treatment:
+
+UPI:
+- Store business UPI ID
+- Generate UPI payment instruction
+- Payment link placeholder
+- Manual mark as paid
+- Future payment gateway webhooks
+
+Bank:
+- Bank statement CSV import
+- Detect credit/debit
+- Extract amount/date/narration/reference
+- Match to outstanding
+- Unknown entries go to reconciliation queue
+
+SMS:
+- MVP: manual paste SMS text into app
+- Parse bank credit/debit message
+- Do not auto-read SMS in web MVP
+- Future: native Android app with user consent
+
+WhatsApp:
+- MVP: manual note/upload placeholder
+- Capture:
+  - Payment claim
+  - Promise-to-pay
+  - Dispute
+  - Screenshot proof placeholder
+- Future: WhatsApp Business API
+
+Payment gateway:
+- MVP: mock payment link and webhook
+- Future: Razorpay/PhonePe integration
+
+========================
+MODULE 21: DASHBOARD
+========================
+
+Main dashboard should show:
+
+Cards:
+1. Total Lena Hai
+2. Total Dena Hai
+3. Overdue Amount
+4. Due Today
+5. Collection This Month
+6. Payments Made This Month
+7. Reconciliation Pending
+8. Suspense Credits
+9. Verification Pending
+10. Disputed Amount
+11. Follow-up Pending
+12. High Risk Parties
+
+Charts:
+- Aging bucket chart
+- Collection trend
+- Receivable vs payable
+- Source-wise outstanding
+- Reconciliation issue breakdown
+
+Lists:
+- Top 10 receivable parties
+- Top 10 payable parties
+- Oldest overdue
+- Recently received payments
+- Reconciliation queue highlights
+
+Keep dashboard simple and mobile-first.
+
+========================
+MODULE 22: REPORTS
+========================
+
+Create reports:
+
+1. Receivable Report
+- Party
+- Mobile
+- Amount due
+- Aging
+- Last follow-up
+- Source
+- Status
+
+2. Payable Report
+- Party
+- Amount payable
+- Source
+- Due date
+
+3. Aging Report
+- Party
+- Bucket
+- Amount
+- Days overdue
+
+4. Collection Report
+- Party
+- Amount collected
+- Date
+- Payment mode
+- Reference
+
+5. Follow-up Report
+- Party
+- Amount
+- Follow-up status
+- Last reminder
+- Next follow-up
+- Staff
+
+6. Reconciliation Report
+- Source
+- Issue type
+- Amount
+- Status
+- Confidence score
+
+7. Source Sync Report
+- Source
+- Last sync/import
+- Records imported
+- Errors
+
+8. Party Statement
+- Opening balance
+- Transactions
+- Payments
+- Closing balance
+- Printable/shareable view
+
+Allow CSV export for reports.
+PDF export can be future placeholder.
+
+========================
+MODULE 23: CUSTOMER TRUST LAYER
+========================
+
+Build statement and balance confirmation system.
+
+Features:
+- Share party statement
+- Generate WhatsApp statement message
+- Mark balance as:
+  - Confirmed
+  - Disputed
+  - Partially agreed
+  - No response
+- Record promise-to-pay
+- Record disputed amount
+- Record customer note
+
+This is important because informal SMEs often have disputes over verbal credit and parchi.
+
+========================
+MODULE 24: ROLES AND STAFF WORKFLOW
+========================
+
+Create basic roles:
+
+Owner:
+- Full access
+
+Accountant:
+- Import data
+- View ledger
+- View reports
+- Resolve reconciliation
+
+Collection Staff:
+- View assigned follow-ups
+- Send reminders
+- Add notes
+- Record payment claim
+- Cannot delete data
+
+Viewer:
+- Dashboard only
+
+For MVP, implement role field and simple access restrictions.
+
+========================
+MODULE 25: UI / UX
+========================
+
+Design mobile-first interface.
+
+Bottom navigation:
+- Home
+- Ledgers
+- Add Parchi
+- Follow-ups
+- Reconcile
+- Reports
+- Connect
+
+Use large buttons.
+Use simple cards.
+Use green for receivable/money coming.
+Use red for payable/money going.
+Use yellow/orange for review/reconciliation.
+Use grey for settled.
+
+Use simple labels:
+- Lena Hai
+- Dena Hai
+- Payment Mila
+- Payment Diya
+- Follow-up
+- Reminder Bhejo
+- Match Karna Hai
+- Doubtful
+- Suspense
+- Statement Bhejo
+
+Avoid frontend jargon:
+- Debit
+- Credit
+- Journal
+- Contra
+- Voucher
+unless inside detailed ledger/import screens.
+
+========================
+MODULE 26: API ROUTES
+========================
+
+Create REST APIs:
+
+Auth:
+POST /api/auth/send-otp
+POST /api/auth/verify-otp
+
+Business:
+GET /api/business
+POST /api/business
+PUT /api/business
+
+Data Sources:
+GET /api/data-sources
+POST /api/data-sources
+PUT /api/data-sources/:id
+POST /api/data-sources/:id/test
+POST /api/data-sources/:id/sync
+
+Import:
+POST /api/import/upload
+POST /api/import/map-columns
+POST /api/import/preview
+POST /api/import/confirm
+POST /api/import/rollback/:jobId
+GET /api/import/jobs
+
+Connectors:
+POST /api/connectors/tally/test
+POST /api/connectors/tally/sync
+POST /api/connectors/busy/test
+POST /api/connectors/busy/sync
+POST /api/connectors/marg/test
+POST /api/connectors/marg/sync
+POST /api/connectors/payment-gateway/mock-webhook
+
+Parchi:
+POST /api/parchi/parse
+POST /api/parchi/save
+
+Parties:
+GET /api/parties
+POST /api/parties
+GET /api/parties/:id
+PUT /api/parties/:id
+GET /api/parties/:id/ledger
+POST /api/parties/merge
+GET /api/parties/duplicates
+
+Ledger:
+GET /api/ledger
+POST /api/ledger
+GET /api/ledger/:id
+
+Money Events:
+GET /api/money-events
+POST /api/money-events
+GET /api/money-events/:id
+
+Outstandings:
+GET /api/outstandings
+GET /api/outstandings/aging
+PUT /api/outstandings/:id/status
+
+Payments:
+GET /api/payments
+POST /api/payments
+POST /api/payments/:id/allocate
+
+Reconciliation:
+GET /api/reconciliation
+GET /api/reconciliation/summary
+POST /api/reconciliation/:id/confirm
+POST /api/reconciliation/:id/merge
+POST /api/reconciliation/:id/split
+POST /api/reconciliation/:id/assign-party
+POST /api/reconciliation/:id/mark-dispute
+POST /api/reconciliation/:id/ignore
+POST /api/reconciliation/:id/keep-separate
+
+Follow-ups:
+GET /api/follow-ups
+POST /api/follow-ups
+PUT /api/follow-ups/:id
+
+Reminders:
+POST /api/reminders/generate
+POST /api/reminders/log
+
+Reports:
+GET /api/reports/receivables
+GET /api/reports/payables
+GET /api/reports/aging
+GET /api/reports/collections
+GET /api/reports/follow-ups
+GET /api/reports/reconciliation
+GET /api/reports/source-sync
+GET /api/reports/party-statement/:partyId
+
+Dashboard:
+GET /api/dashboard
+
+========================
+MODULE 27: SAMPLE DATA
+========================
+
+Seed demo data.
+
+Business:
+Mayank Traders
+
+Data sources:
+- Manual Parchi
+- Tally Demo
+- BUSY Demo
+- Marg Demo
+- Excel Upload Demo
+- Bank Statement Demo
+- Payment Gateway Demo
+
+Parties:
+- Ramesh Store
+- Suresh Enterprises
+- Amit Traders
+- Rajesh Vendor
+- Gupta Distributors
+- Mohan Contractor
+- Ravi Customer
+- Sharma Pharma
+
+Sample transactions:
+- Sales invoice to Ramesh Store ₹25,000 due in 15 days
+- Payment received from Ramesh ₹10,000
+- Suresh Enterprises outstanding ₹42,000 overdue 30 days
+- Rajesh Vendor payable ₹18,000
+- Manual parchi: Amit se ₹5,000 advance liya
+- Manual parchi: Mohan ko ₹12,000 ka maal udhaar diya
+- Expense: Petrol ₹1,200
+- Bank credit ₹10,000 with possible match to Ramesh
+- Unknown bank credit ₹7,500 marked suspense
+- WhatsApp claim: Ravi says paid ₹5,000 but no bank credit
+- Duplicate invoice from Excel and Tally for same party
+- Cheque bounce event
+- Partial payment event
+
+Dashboard should show:
+- Receivable
+- Payable
+- Overdue
+- Reconciliation pending
+- Suspense
+- Verification pending
+- Disputed
+- Follow-ups
+
+========================
+MODULE 28: VALIDATION AND ERROR HANDLING
+========================
+
+Validation:
+- Amount must be positive
+- Party required for confirmed ledger entry
+- Date required
+- Due date cannot be before transaction date unless confirmed
+- Mobile validation if provided
+- UPI ID validation if provided
+- GSTIN validation if provided
+- Duplicate UTR should be flagged
+- Duplicate invoice should be flagged
+- Empty parchi input should be blocked
+- Imported rows with missing amount should fail validation
+
+Friendly messages:
+- “Amount daalna zaroori hai.”
+- “Party select karo ya nayi party banao.”
+- “Ye entry doubtful hai. Reconciliation mein bhej rahe hain.”
+- “Same UTR pehle se exist karta hai.”
+- “Is payment ka party clear nahi hai. Suspense mein daal diya.”
+- “Customer ne payment claim kiya hai, lekin bank confirmation pending hai.”
+
+========================
+MODULE 29: SECURITY AND AUDIT
+========================
+
+Implement:
+- User can access only their business data
+- Role-based basic access
+- Input validation
+- Environment variables for secrets
+- Audit logs for:
+  - Import
+  - Reconciliation decision
+  - Party merge
+  - Payment allocation
+  - Ledger adjustment
+  - Deletion/ignore/reversal
+
+Never delete financial records silently.
+Use status:
+- ignored
+- reversed
+- cancelled
+instead of hard delete where possible.
+
+========================
+MODULE 30: MVP BOUNDARIES
+========================
+
+Build in MVP:
+
+Must build:
+- Login
+- Business setup
+- Manual parchi
+- Party management
+- Party ledger
+- Excel/CSV import
+- Bank statement CSV import
+- Column mapping
+- Universal ledger normalizer
+- Outstanding engine
+- Reconciliation queue
+- Payment matching
+- WhatsApp click-to-chat reminders
+- Payment recording
+- Follow-up CRM
+- Reports
+- Dashboard
+- Tally mock connector
+- BUSY mock connector
+- Marg mock connector
+- Payment gateway mock webhook
+- Seed data
+- Mobile UI
+
+Do not build in MVP:
+- Real SMS auto-reading
+- Real notification listener
+- Real WhatsApp Business API
+- Real live Tally sync
+- Real BUSY live sync
+- Real Marg live sync
+- Real payment gateway production settlement
+- GST filing
+- Inventory
+- Lending
+- Credit score
+- Native Android app
+
+But create architecture placeholders for future.
+
+========================
+MODULE 31: BUILD ORDER
+========================
+
+Build in this order:
+
+Phase 1:
+- Project setup
+- Prisma schema
+- Auth
+- Business setup
+- Basic layout/navigation
+
+Phase 2:
+- Parties
+- Manual parchi
+- Parchi parser
+- Ledger entries
+- Party ledger
+
+Phase 3:
+- Excel/CSV import
+- Column mapping
+- Bank statement import
+- Universal ledger normalizer
+
+Phase 4:
+- Outstanding engine
+- Dashboard
+- Reports
+
+Phase 5:
+- Payment recording
+- Payment matching
+- Reconciliation engine
+- Reconciliation dashboard
+
+Phase 6:
+- WhatsApp reminders
+- Follow-up CRM
+- Statement sharing
+- Balance confirmation
+
+Phase 7:
+- Tally mock connector
+- BUSY mock connector
+- Marg mock connector
+- Payment gateway mock webhook
+
+Phase 8:
+- Seed data
+- UI polish
+- Mobile responsiveness
+- Error handling
+- Run instructions
+
+========================
+MODULE 32: ACCEPTANCE CRITERIA
+========================
+
+The MVP is complete only if:
+
+1. User can login with mobile + mock OTP.
+2. User can create business profile.
+3. User can add parties.
+4. User can enter parchi-style transaction.
+5. System parses parchi entry.
+6. User can confirm/edit parsed entry.
+7. Party ledger updates.
+8. User can upload Excel/CSV.
+9. User can map columns.
+10. Imported data creates parties, ledger entries, and outstandings.
+11. Bank statement import detects credits/debits.
+12. Unknown bank credits go to suspense.
+13. Duplicate entries go to reconciliation queue.
+14. Payment matching suggests outstanding matches.
+15. Reconciliation dashboard works.
+16. User can confirm, merge, split, assign party, dispute, ignore, or keep separate.
+17. Dashboard shows receivable, payable, overdue, suspense, reconciliation pending, and follow-up.
+18. WhatsApp reminders generate correctly.
+19. wa.me link opens with encoded message.
+20. Follow-up history is saved.
+21. Payment recording works.
+22. Payment allocation reduces outstanding.
+23. Party statement can be viewed.
+24. Reports are available.
+25. Tally mock connector imports sample data.
+26. BUSY mock connector imports sample data.
+27. Marg mock connector imports sample data.
+28. Payment gateway mock webhook creates money event.
+29. All financial changes have audit logs.
+30. App works properly on mobile.
+31. No broken buttons.
+32. No placeholder-only primary screens.
+33. Run instructions are clear.
+
+========================
+MODULE 33: FINAL OUTPUT REQUIRED
+========================
+
+At the end, provide:
+
+1. Complete working code
+2. Prisma database schema
+3. Seed data
+4. Backend APIs
+5. Frontend screens
+6. Mobile-first UI
+7. Import workflow
+8. Reconciliation workflow
+9. WhatsApp reminder workflow
+10. Mock connector workflows
+11. Payment matching workflow
+12. Setup instructions for Replit
+13. Known limitations
+14. Future roadmap
+
+Build a working MVP.
+Do not create only wireframes.
+Do not overcomplicate with tax compliance.
+Do not fake real integrations.
+Make the system stable, modular, and future-ready.

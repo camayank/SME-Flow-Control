@@ -3,20 +3,35 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ParchiFlow - Universal SME Ledger Intelligence & Collection Automation OS
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: business
+  - name: parties
+  - name: parchi
+  - name: ledger
+  - name: money-events
+  - name: outstandings
+  - name: payments
+  - name: reconciliation
+  - name: follow-ups
+  - name: reminders
+  - name: import
+  - name: connectors
+  - name: data-sources
+  - name: reports
+  - name: dashboard
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +39,1328 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/send-otp:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to mobile number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpBody"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendOtpResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP and get session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpBody"
+      responses:
+        "200":
+          description: Auth token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # BUSINESS
+  /business:
+    get:
+      operationId: getBusiness
+      tags: [business]
+      summary: Get business profile
+      responses:
+        "200":
+          description: Business profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+    post:
+      operationId: createBusiness
+      tags: [business]
+      summary: Create business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBusinessBody"
+      responses:
+        "201":
+          description: Created business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+    put:
+      operationId: updateBusiness
+      tags: [business]
+      summary: Update business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBusinessBody"
+      responses:
+        "200":
+          description: Updated business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Business"
+
+  # PARTIES
+  /parties:
+    get:
+      operationId: getParties
+      tags: [parties]
+      summary: List all parties
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: balance_type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of parties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Party"
+    post:
+      operationId: createParty
+      tags: [parties]
+      summary: Create a party
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePartyBody"
+      responses:
+        "201":
+          description: Created party
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Party"
+
+  /parties/duplicates:
+    get:
+      operationId: getPartyDuplicates
+      tags: [parties]
+      summary: Get potential duplicate parties
+      responses:
+        "200":
+          description: Duplicate party groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DuplicatePartyGroup"
+
+  /parties/merge:
+    post:
+      operationId: mergeParties
+      tags: [parties]
+      summary: Merge duplicate parties
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergePartiesBody"
+      responses:
+        "200":
+          description: Merged party
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Party"
+
+  /parties/{id}:
+    get:
+      operationId: getParty
+      tags: [parties]
+      summary: Get a party by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Party
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Party"
+    put:
+      operationId: updateParty
+      tags: [parties]
+      summary: Update a party
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePartyBody"
+      responses:
+        "200":
+          description: Updated party
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Party"
+
+  /parties/{id}/ledger:
+    get:
+      operationId: getPartyLedger
+      tags: [parties]
+      summary: Get ledger for a party
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Party ledger
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartyLedger"
+
+  # PARCHI
+  /parchi/parse:
+    post:
+      operationId: parseParchi
+      tags: [parchi]
+      summary: Parse a parchi text entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParseParchiBody"
+      responses:
+        "200":
+          description: Parsed parchi result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedParchi"
+
+  /parchi/save:
+    post:
+      operationId: saveParchi
+      tags: [parchi]
+      summary: Save a confirmed parchi entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveParchiBody"
+      responses:
+        "201":
+          description: Saved parchi result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveParchiResponse"
+
+  # LEDGER
+  /ledger:
+    get:
+      operationId: getLedgerEntries
+      tags: [ledger]
+      summary: Get ledger entries
+      parameters:
+        - name: party_id
+          in: query
+          schema:
+            type: integer
+        - name: entry_type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ledger entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LedgerEntry"
+    post:
+      operationId: createLedgerEntry
+      tags: [ledger]
+      summary: Create a ledger entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLedgerEntryBody"
+      responses:
+        "201":
+          description: Created ledger entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerEntry"
+
+  /ledger/{id}:
+    get:
+      operationId: getLedgerEntry
+      tags: [ledger]
+      summary: Get a ledger entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ledger entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerEntry"
+
+  # MONEY EVENTS
+  /money-events:
+    get:
+      operationId: getMoneyEvents
+      tags: [money-events]
+      summary: Get money events
+      parameters:
+        - name: party_id
+          in: query
+          schema:
+            type: integer
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: reconciliation_status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Money events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MoneyEvent"
+    post:
+      operationId: createMoneyEvent
+      tags: [money-events]
+      summary: Create a money event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMoneyEventBody"
+      responses:
+        "201":
+          description: Created money event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoneyEvent"
+
+  /money-events/{id}:
+    get:
+      operationId: getMoneyEvent
+      tags: [money-events]
+      summary: Get a money event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Money event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoneyEvent"
+
+  # OUTSTANDINGS
+  /outstandings:
+    get:
+      operationId: getOutstandings
+      tags: [outstandings]
+      summary: Get outstandings
+      parameters:
+        - name: party_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: aging_bucket
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Outstandings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Outstanding"
+
+  /outstandings/aging:
+    get:
+      operationId: getOutstandingsAging
+      tags: [outstandings]
+      summary: Get outstandings grouped by aging bucket
+      responses:
+        "200":
+          description: Aging summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgingSummary"
+
+  /outstandings/{id}/status:
+    put:
+      operationId: updateOutstandingStatus
+      tags: [outstandings]
+      summary: Update outstanding status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOutstandingStatusBody"
+      responses:
+        "200":
+          description: Updated outstanding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outstanding"
+
+  # PAYMENTS
+  /payments:
+    get:
+      operationId: getPayments
+      tags: [payments]
+      summary: Get payments
+      parameters:
+        - name: party_id
+          in: query
+          schema:
+            type: integer
+        - name: match_status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+    post:
+      operationId: recordPayment
+      tags: [payments]
+      summary: Record a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordPaymentBody"
+      responses:
+        "201":
+          description: Recorded payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  /payments/{id}/allocate:
+    post:
+      operationId: allocatePayment
+      tags: [payments]
+      summary: Allocate payment to outstanding(s)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AllocatePaymentBody"
+      responses:
+        "200":
+          description: Allocation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # RECONCILIATION
+  /reconciliation:
+    get:
+      operationId: getReconciliationQueue
+      tags: [reconciliation]
+      summary: Get reconciliation queue
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: issue_type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reconciliation items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReconciliationItem"
+
+  /reconciliation/summary:
+    get:
+      operationId: getReconciliationSummary
+      tags: [reconciliation]
+      summary: Get reconciliation summary counts
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationSummary"
+
+  /reconciliation/{id}/confirm:
+    post:
+      operationId: confirmReconciliation
+      tags: [reconciliation]
+      summary: Confirm a reconciliation match
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationActionBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reconciliation/{id}/merge:
+    post:
+      operationId: mergeReconciliation
+      tags: [reconciliation]
+      summary: Merge duplicate in reconciliation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationActionBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reconciliation/{id}/assign-party:
+    post:
+      operationId: assignPartyReconciliation
+      tags: [reconciliation]
+      summary: Assign party to unmatched item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignPartyBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reconciliation/{id}/mark-dispute:
+    post:
+      operationId: markDisputeReconciliation
+      tags: [reconciliation]
+      summary: Mark item as disputed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationActionBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reconciliation/{id}/ignore:
+    post:
+      operationId: ignoreReconciliation
+      tags: [reconciliation]
+      summary: Ignore reconciliation item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationActionBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reconciliation/{id}/keep-separate:
+    post:
+      operationId: keepSeparateReconciliation
+      tags: [reconciliation]
+      summary: Keep items separate (not duplicates)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationActionBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # FOLLOW-UPS
+  /follow-ups:
+    get:
+      operationId: getFollowUps
+      tags: [follow-ups]
+      summary: Get follow-ups
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: party_id
+          in: query
+          schema:
+            type: integer
+        - name: tab
+          in: query
+          schema:
+            type: string
+            description: "due_today | overdue | promised_today | high_priority | disputed | all"
+      responses:
+        "200":
+          description: Follow-ups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FollowUp"
+    post:
+      operationId: createFollowUp
+      tags: [follow-ups]
+      summary: Create a follow-up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFollowUpBody"
+      responses:
+        "201":
+          description: Created follow-up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUp"
+
+  /follow-ups/{id}:
+    put:
+      operationId: updateFollowUp
+      tags: [follow-ups]
+      summary: Update a follow-up
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFollowUpBody"
+      responses:
+        "200":
+          description: Updated follow-up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUp"
+
+  # REMINDERS
+  /reminders/generate:
+    post:
+      operationId: generateReminder
+      tags: [reminders]
+      summary: Generate a WhatsApp reminder message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReminderBody"
+      responses:
+        "200":
+          description: Generated reminder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderMessage"
+
+  /reminders/log:
+    post:
+      operationId: logReminder
+      tags: [reminders]
+      summary: Log a sent reminder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogReminderBody"
+      responses:
+        "201":
+          description: Logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # DATA SOURCES
+  /data-sources:
+    get:
+      operationId: getDataSources
+      tags: [data-sources]
+      summary: Get data sources
+      responses:
+        "200":
+          description: Data sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataSource"
+    post:
+      operationId: createDataSource
+      tags: [data-sources]
+      summary: Create a data source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDataSourceBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSource"
+
+  /data-sources/{id}:
+    put:
+      operationId: updateDataSource
+      tags: [data-sources]
+      summary: Update a data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDataSourceBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSource"
+
+  /data-sources/{id}/test:
+    post:
+      operationId: testDataSource
+      tags: [data-sources]
+      summary: Test a data source connection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestConnectionResponse"
+
+  /data-sources/{id}/sync:
+    post:
+      operationId: syncDataSource
+      tags: [data-sources]
+      summary: Sync a data source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+
+  # IMPORT
+  /import/upload:
+    post:
+      operationId: uploadImportFile
+      tags: [import]
+      summary: Upload a file for import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadImportBody"
+      responses:
+        "200":
+          description: Upload result with column detection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadImportResponse"
+
+  /import/map-columns:
+    post:
+      operationId: mapImportColumns
+      tags: [import]
+      summary: Map columns for import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapColumnsBody"
+      responses:
+        "200":
+          description: Preview with mapped columns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+
+  /import/confirm:
+    post:
+      operationId: confirmImport
+      tags: [import]
+      summary: Confirm and run import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmImportBody"
+      responses:
+        "200":
+          description: Import job result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportJobResult"
+
+  /import/jobs:
+    get:
+      operationId: getImportJobs
+      tags: [import]
+      summary: Get import job history
+      responses:
+        "200":
+          description: Import jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImportJob"
+
+  /import/rollback/{jobId}:
+    post:
+      operationId: rollbackImport
+      tags: [import]
+      summary: Rollback an import job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rollback result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # CONNECTORS
+  /connectors/tally/test:
+    post:
+      operationId: testTallyConnector
+      tags: [connectors]
+      summary: Test Tally connector
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TallyConfigBody"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestConnectionResponse"
+
+  /connectors/tally/sync:
+    post:
+      operationId: syncTallyConnector
+      tags: [connectors]
+      summary: Sync from Tally (mock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TallyConfigBody"
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+
+  /connectors/busy/test:
+    post:
+      operationId: testBusyConnector
+      tags: [connectors]
+      summary: Test BUSY connector
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusyConfigBody"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestConnectionResponse"
+
+  /connectors/busy/sync:
+    post:
+      operationId: syncBusyConnector
+      tags: [connectors]
+      summary: Sync from BUSY (mock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusyConfigBody"
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+
+  /connectors/marg/test:
+    post:
+      operationId: testMargConnector
+      tags: [connectors]
+      summary: Test Marg connector
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MargConfigBody"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestConnectionResponse"
+
+  /connectors/marg/sync:
+    post:
+      operationId: syncMargConnector
+      tags: [connectors]
+      summary: Sync from Marg (mock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MargConfigBody"
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+
+  /connectors/payment-gateway/mock-webhook:
+    post:
+      operationId: mockPaymentGatewayWebhook
+      tags: [connectors]
+      summary: Simulate payment gateway webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MockWebhookBody"
+      responses:
+        "200":
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # DASHBOARD
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get main dashboard data
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
+  # REPORTS
+  /reports/receivables:
+    get:
+      operationId: getReceivablesReport
+      tags: [reports]
+      summary: Receivables report
+      responses:
+        "200":
+          description: Receivables report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReceivableReportRow"
+
+  /reports/payables:
+    get:
+      operationId: getPayablesReport
+      tags: [reports]
+      summary: Payables report
+      responses:
+        "200":
+          description: Payables report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PayableReportRow"
+
+  /reports/aging:
+    get:
+      operationId: getAgingReport
+      tags: [reports]
+      summary: Aging report
+      responses:
+        "200":
+          description: Aging report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgingReportRow"
+
+  /reports/collections:
+    get:
+      operationId: getCollectionsReport
+      tags: [reports]
+      summary: Collections report
+      responses:
+        "200":
+          description: Collections report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CollectionReportRow"
+
+  /reports/follow-ups:
+    get:
+      operationId: getFollowUpsReport
+      tags: [reports]
+      summary: Follow-ups report
+      responses:
+        "200":
+          description: Follow-ups report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FollowUpReportRow"
+
+  /reports/reconciliation:
+    get:
+      operationId: getReconciliationReport
+      tags: [reports]
+      summary: Reconciliation report
+      responses:
+        "200":
+          description: Reconciliation report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReconciliationReportRow"
+
+  /reports/source-sync:
+    get:
+      operationId: getSourceSyncReport
+      tags: [reports]
+      summary: Source sync report
+      responses:
+        "200":
+          description: Source sync report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SourceSyncReportRow"
+
+  /reports/party-statement/{partyId}:
+    get:
+      operationId: getPartyStatement
+      tags: [reports]
+      summary: Get party statement
+      parameters:
+        - name: partyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Party statement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartyStatement"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +1368,1448 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success]
+
+    # AUTH SCHEMAS
+    SendOtpBody:
+      type: object
+      properties:
+        mobile:
+          type: string
+      required: [mobile]
+
+    SendOtpResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        mobile:
+          type: string
+      required: [success, message, mobile]
+
+    VerifyOtpBody:
+      type: object
+      properties:
+        mobile:
+          type: string
+        otp:
+          type: string
+      required: [mobile, otp]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        hasBusiness:
+          type: boolean
+      required: [token, user, hasBusiness]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          nullable: true
+        mobile:
+          type: string
+        email:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, mobile, createdAt]
+
+    # BUSINESS SCHEMAS
+    Business:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        businessName:
+          type: string
+        businessType:
+          type: string
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        gstin:
+          type: string
+          nullable: true
+        upiId:
+          type: string
+          nullable: true
+        preferredLanguage:
+          type: string
+        existingSystem:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, businessName, businessType, preferredLanguage, createdAt]
+
+    CreateBusinessBody:
+      type: object
+      properties:
+        businessName:
+          type: string
+        businessType:
+          type: string
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        gstin:
+          type: string
+          nullable: true
+        upiId:
+          type: string
+          nullable: true
+        preferredLanguage:
+          type: string
+        existingSystem:
+          type: string
+          nullable: true
+      required: [businessName, businessType, preferredLanguage]
+
+    # PARTY SCHEMAS
+    Party:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        name:
+          type: string
+        normalizedName:
+          type: string
+        mobile:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        gstin:
+          type: string
+          nullable: true
+        type:
+          type: string
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        currentBalance:
+          type: number
+        balanceType:
+          type: string
+        openingBalance:
+          type: number
+        openingBalanceType:
+          type: string
+        riskScore:
+          type: number
+          nullable: true
+        sourceType:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, name, normalizedName, type, currentBalance, balanceType, openingBalance, openingBalanceType, createdAt]
+
+    CreatePartyBody:
+      type: object
+      properties:
+        name:
+          type: string
+        mobile:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        gstin:
+          type: string
+          nullable: true
+        type:
+          type: string
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        openingBalance:
+          type: number
+        openingBalanceType:
+          type: string
+      required: [name, type, openingBalance, openingBalanceType]
+
+    DuplicatePartyGroup:
+      type: object
+      properties:
+        parties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Party"
+        reason:
+          type: string
+      required: [parties, reason]
+
+    MergePartiesBody:
+      type: object
+      properties:
+        primaryPartyId:
+          type: integer
+        mergePartyId:
+          type: integer
+        reason:
+          type: string
+      required: [primaryPartyId, mergePartyId, reason]
+
+    PartyLedger:
+      type: object
+      properties:
+        party:
+          $ref: "#/components/schemas/Party"
+        summary:
+          $ref: "#/components/schemas/PartyLedgerSummary"
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LedgerEntry"
+      required: [party, summary, entries]
+
+    PartyLedgerSummary:
+      type: object
+      properties:
+        totalInvoices:
+          type: number
+        totalPaymentsReceived:
+          type: number
+        totalPayable:
+          type: number
+        totalOverdue:
+          type: number
+        lastFollowUpAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextFollowUpAt:
+          type: string
+          format: date-time
+          nullable: true
+        riskScore:
+          type: number
+          nullable: true
+      required: [totalInvoices, totalPaymentsReceived, totalPayable, totalOverdue]
+
+    # PARCHI SCHEMAS
+    ParseParchiBody:
+      type: object
+      properties:
+        text:
+          type: string
+      required: [text]
+
+    ParsedParchi:
+      type: object
+      properties:
+        partyName:
+          type: string
+          nullable: true
+        amount:
+          type: number
+          nullable: true
+        transactionType:
+          type: string
+          nullable: true
+        direction:
+          type: string
+          nullable: true
+        eventType:
+          type: string
+          nullable: true
+        eventDate:
+          type: string
+          nullable: true
+        promiseDate:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        confidence:
+          type: number
+        confirmationMessage:
+          type: string
+      required: [confidence, confirmationMessage]
+
+    SaveParchiBody:
+      type: object
+      properties:
+        partyName:
+          type: string
+          nullable: true
+        partyId:
+          type: integer
+          nullable: true
+        amount:
+          type: number
+        transactionType:
+          type: string
+        direction:
+          type: string
+        eventType:
+          type: string
+        eventDate:
+          type: string
+        promiseDate:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        rawText:
+          type: string
+          nullable: true
+      required: [amount, transactionType, direction, eventType, eventDate]
+
+    SaveParchiResponse:
+      type: object
+      properties:
+        moneyEvent:
+          $ref: "#/components/schemas/MoneyEvent"
+        ledgerEntry:
+          $ref: "#/components/schemas/LedgerEntry"
+          nullable: true
+        reconciliationItem:
+          $ref: "#/components/schemas/ReconciliationItem"
+          nullable: true
+        message:
+          type: string
+      required: [moneyEvent, message]
+
+    # LEDGER SCHEMAS
+    LedgerEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        partyId:
+          type: integer
+          nullable: true
+        partyName:
+          type: string
+          nullable: true
+        entryType:
+          type: string
+        voucherNumber:
+          type: string
+          nullable: true
+        invoiceNumber:
+          type: string
+          nullable: true
+        amount:
+          type: number
+        debitAmount:
+          type: number
+          nullable: true
+        creditAmount:
+          type: number
+          nullable: true
+        entryDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        narration:
+          type: string
+          nullable: true
+        status:
+          type: string
+        reconciliationStatus:
+          type: string
+        sourceType:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, entryType, amount, entryDate, status, reconciliationStatus, createdAt]
+
+    CreateLedgerEntryBody:
+      type: object
+      properties:
+        partyId:
+          type: integer
+          nullable: true
+        entryType:
+          type: string
+        amount:
+          type: number
+        entryDate:
+          type: string
+        dueDate:
+          type: string
+          nullable: true
+        narration:
+          type: string
+          nullable: true
+        voucherNumber:
+          type: string
+          nullable: true
+        invoiceNumber:
+          type: string
+          nullable: true
+      required: [entryType, amount, entryDate]
+
+    # MONEY EVENT SCHEMAS
+    MoneyEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        sourceType:
+          type: string
+        eventType:
+          type: string
+        amount:
+          type: number
+        direction:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        partyId:
+          type: integer
+          nullable: true
+        partyName:
+          type: string
+          nullable: true
+        referenceNumber:
+          type: string
+          nullable: true
+        utr:
+          type: string
+          nullable: true
+        invoiceNumber:
+          type: string
+          nullable: true
+        narration:
+          type: string
+          nullable: true
+        confidenceScore:
+          type: number
+        reconciliationStatus:
+          type: string
+        rawInput:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, sourceType, eventType, amount, direction, eventDate, confidenceScore, reconciliationStatus, createdAt]
+
+    CreateMoneyEventBody:
+      type: object
+      properties:
+        sourceType:
+          type: string
+        eventType:
+          type: string
+        amount:
+          type: number
+        direction:
+          type: string
+        eventDate:
+          type: string
+        partyId:
+          type: integer
+          nullable: true
+        referenceNumber:
+          type: string
+          nullable: true
+        utr:
+          type: string
+          nullable: true
+        invoiceNumber:
+          type: string
+          nullable: true
+        narration:
+          type: string
+          nullable: true
+        rawInput:
+          type: string
+          nullable: true
+      required: [sourceType, eventType, amount, direction, eventDate]
+
+    # OUTSTANDING SCHEMAS
+    Outstanding:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        partyId:
+          type: integer
+        partyName:
+          type: string
+          nullable: true
+        partyMobile:
+          type: string
+          nullable: true
+        originalAmount:
+          type: number
+        amountDue:
+          type: number
+        amountCollected:
+          type: number
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        agingDays:
+          type: integer
+        agingBucket:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        lastFollowUpAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextFollowUpAt:
+          type: string
+          format: date-time
+          nullable: true
+        invoiceNumber:
+          type: string
+          nullable: true
+        sourceType:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, partyId, originalAmount, amountDue, amountCollected, agingDays, agingBucket, status, priority, createdAt]
+
+    AgingSummary:
+      type: object
+      properties:
+        notDue:
+          type: number
+        dueToday:
+          type: number
+        overdue1to7:
+          type: number
+        overdue8to15:
+          type: number
+        overdue16to30:
+          type: number
+        overdue31to60:
+          type: number
+        overdue60plus:
+          type: number
+        buckets:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgingBucket"
+      required: [notDue, dueToday, overdue1to7, overdue8to15, overdue16to30, overdue31to60, overdue60plus, buckets]
+
+    AgingBucket:
+      type: object
+      properties:
+        bucket:
+          type: string
+        label:
+          type: string
+        amount:
+          type: number
+        count:
+          type: integer
+      required: [bucket, label, amount, count]
+
+    UpdateOutstandingStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+        note:
+          type: string
+          nullable: true
+      required: [status]
+
+    # PAYMENT SCHEMAS
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        partyId:
+          type: integer
+          nullable: true
+        partyName:
+          type: string
+          nullable: true
+        amount:
+          type: number
+        paymentDate:
+          type: string
+          format: date-time
+        paymentMode:
+          type: string
+        referenceNumber:
+          type: string
+          nullable: true
+        utr:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        matchStatus:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, amount, paymentDate, paymentMode, matchStatus, createdAt]
+
+    RecordPaymentBody:
+      type: object
+      properties:
+        partyId:
+          type: integer
+          nullable: true
+        outstandingId:
+          type: integer
+          nullable: true
+        amount:
+          type: number
+        paymentDate:
+          type: string
+        paymentMode:
+          type: string
+        referenceNumber:
+          type: string
+          nullable: true
+        utr:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        direction:
+          type: string
+      required: [amount, paymentDate, paymentMode, direction]
+
+    AllocatePaymentBody:
+      type: object
+      properties:
+        allocations:
+          type: array
+          items:
+            type: object
+            properties:
+              outstandingId:
+                type: integer
+              amount:
+                type: number
+            required: [outstandingId, amount]
+      required: [allocations]
+
+    # RECONCILIATION SCHEMAS
+    ReconciliationItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        sourceType:
+          type: string
+        issueType:
+          type: string
+        confidenceScore:
+          type: number
+        reason:
+          type: string
+        suggestedAction:
+          type: string
+        status:
+          type: string
+        amount:
+          type: number
+          nullable: true
+        partyName:
+          type: string
+          nullable: true
+        suggestedPartyId:
+          type: integer
+          nullable: true
+        referenceNumber:
+          type: string
+          nullable: true
+        utr:
+          type: string
+          nullable: true
+        eventDate:
+          type: string
+          format: date-time
+          nullable: true
+        userAction:
+          type: string
+          nullable: true
+        moneyEventId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, sourceType, issueType, confidenceScore, reason, suggestedAction, status, createdAt]
+
+    ReconciliationSummary:
+      type: object
+      properties:
+        pendingReview:
+          type: integer
+        possibleDuplicates:
+          type: integer
+        suspenseCredits:
+          type: integer
+        suspenseDebits:
+          type: integer
+        verificationPending:
+          type: integer
+        disputed:
+          type: integer
+        reversals:
+          type: integer
+        resolved:
+          type: integer
+        total:
+          type: integer
+      required: [pendingReview, possibleDuplicates, suspenseCredits, suspenseDebits, verificationPending, disputed, reversals, resolved, total]
+
+    ReconciliationActionBody:
+      type: object
+      properties:
+        note:
+          type: string
+          nullable: true
+      required: []
+
+    AssignPartyBody:
+      type: object
+      properties:
+        partyId:
+          type: integer
+          nullable: true
+        createNewParty:
+          type: boolean
+        newPartyName:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+      required: []
+
+    # FOLLOW-UP SCHEMAS
+    FollowUp:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        partyId:
+          type: integer
+        partyName:
+          type: string
+          nullable: true
+        partyMobile:
+          type: string
+          nullable: true
+        outstandingId:
+          type: integer
+          nullable: true
+        outstandingAmount:
+          type: number
+          nullable: true
+        agingDays:
+          type: integer
+          nullable: true
+        followUpType:
+          type: string
+        status:
+          type: string
+        note:
+          type: string
+          nullable: true
+        promisedPaymentDate:
+          type: string
+          format: date-time
+          nullable: true
+        promisedAmount:
+          type: number
+          nullable: true
+        nextFollowUpAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastReminderAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, partyId, followUpType, status, createdAt]
+
+    CreateFollowUpBody:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        outstandingId:
+          type: integer
+          nullable: true
+        followUpType:
+          type: string
+        note:
+          type: string
+          nullable: true
+        promisedPaymentDate:
+          type: string
+          nullable: true
+        promisedAmount:
+          type: number
+          nullable: true
+        nextFollowUpAt:
+          type: string
+          nullable: true
+      required: [partyId, followUpType]
+
+    UpdateFollowUpBody:
+      type: object
+      properties:
+        status:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        promisedPaymentDate:
+          type: string
+          nullable: true
+        promisedAmount:
+          type: number
+          nullable: true
+        nextFollowUpAt:
+          type: string
+          nullable: true
+      required: []
+
+    # REMINDER SCHEMAS
+    ReminderMessage:
+      type: object
+      properties:
+        message:
+          type: string
+        waLink:
+          type: string
+        templateType:
+          type: string
+        partyName:
+          type: string
+        amount:
+          type: number
+        mobile:
+          type: string
+          nullable: true
+      required: [message, waLink, templateType, partyName, amount]
+
+    GenerateReminderBody:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        outstandingId:
+          type: integer
+          nullable: true
+        templateType:
+          type: string
+        customNote:
+          type: string
+          nullable: true
+      required: [partyId, templateType]
+
+    LogReminderBody:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        outstandingId:
+          type: integer
+          nullable: true
+        channel:
+          type: string
+        templateType:
+          type: string
+        message:
+          type: string
+        sentStatus:
+          type: string
+      required: [partyId, channel, templateType, message, sentStatus]
+
+    # DATA SOURCE SCHEMAS
+    DataSource:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        sourceType:
+          type: string
+        sourceName:
+          type: string
+        connectionStatus:
+          type: string
+        lastSyncAt:
+          type: string
+          format: date-time
+          nullable: true
+        recordsImported:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, sourceType, sourceName, connectionStatus, recordsImported, createdAt]
+
+    CreateDataSourceBody:
+      type: object
+      properties:
+        sourceType:
+          type: string
+        sourceName:
+          type: string
+        configJson:
+          type: object
+          nullable: true
+      required: [sourceType, sourceName]
+
+    TestConnectionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        details:
+          type: string
+          nullable: true
+      required: [success, message]
+
+    SyncResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        recordsSynced:
+          type: integer
+        partiesCreated:
+          type: integer
+        ledgerEntriesCreated:
+          type: integer
+        outstandingsCreated:
+          type: integer
+        reconciliationItems:
+          type: integer
+      required: [success, message, recordsSynced, partiesCreated, ledgerEntriesCreated, outstandingsCreated, reconciliationItems]
+
+    # IMPORT SCHEMAS
+    UploadImportBody:
+      type: object
+      properties:
+        fileData:
+          type: string
+          description: Base64 encoded file content
+        fileName:
+          type: string
+        fileType:
+          type: string
+        importType:
+          type: string
+        sourceId:
+          type: integer
+          nullable: true
+      required: [fileData, fileName, fileType, importType]
+
+    UploadImportResponse:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        detectedColumns:
+          type: array
+          items:
+            type: string
+        sampleRows:
+          type: array
+          items:
+            type: object
+        totalRows:
+          type: integer
+        suggestedMapping:
+          type: object
+      required: [jobId, detectedColumns, sampleRows, totalRows, suggestedMapping]
+
+    MapColumnsBody:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        columnMapping:
+          type: object
+      required: [jobId, columnMapping]
+
+    ImportPreview:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        previewRows:
+          type: array
+          items:
+            type: object
+        validCount:
+          type: integer
+        invalidCount:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
+      required: [jobId, previewRows, validCount, invalidCount, errors]
+
+    ConfirmImportBody:
+      type: object
+      properties:
+        jobId:
+          type: integer
+      required: [jobId]
+
+    ImportJobResult:
+      type: object
+      properties:
+        jobId:
+          type: integer
+        status:
+          type: string
+        totalRecords:
+          type: integer
+        successfulRecords:
+          type: integer
+        failedRecords:
+          type: integer
+        partiesCreated:
+          type: integer
+        ledgerEntriesCreated:
+          type: integer
+        reconciliationItems:
+          type: integer
+        message:
+          type: string
+      required: [jobId, status, totalRecords, successfulRecords, failedRecords, partiesCreated, ledgerEntriesCreated, reconciliationItems, message]
+
+    ImportJob:
+      type: object
+      properties:
+        id:
+          type: integer
+        businessId:
+          type: integer
+        importType:
+          type: string
+        status:
+          type: string
+        totalRecords:
+          type: integer
+        successfulRecords:
+          type: integer
+        failedRecords:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, businessId, importType, status, totalRecords, successfulRecords, failedRecords, createdAt]
+
+    # CONNECTOR SCHEMAS
+    TallyConfigBody:
+      type: object
+      properties:
+        companyName:
+          type: string
+          nullable: true
+        host:
+          type: string
+          nullable: true
+        port:
+          type: integer
+          nullable: true
+        integrationType:
+          type: string
+        sourceId:
+          type: integer
+          nullable: true
+      required: [integrationType]
+
+    BusyConfigBody:
+      type: object
+      properties:
+        apiBaseUrl:
+          type: string
+          nullable: true
+        apiKey:
+          type: string
+          nullable: true
+        companyId:
+          type: string
+          nullable: true
+        integrationType:
+          type: string
+        sourceId:
+          type: integer
+          nullable: true
+      required: [integrationType]
+
+    MargConfigBody:
+      type: object
+      properties:
+        apiBaseUrl:
+          type: string
+          nullable: true
+        apiKey:
+          type: string
+          nullable: true
+        companyId:
+          type: string
+          nullable: true
+        integrationType:
+          type: string
+        sourceId:
+          type: integer
+          nullable: true
+      required: [integrationType]
+
+    MockWebhookBody:
+      type: object
+      properties:
+        eventType:
+          type: string
+        amount:
+          type: number
+        referenceId:
+          type: string
+        payerName:
+          type: string
+          nullable: true
+        payerMobile:
+          type: string
+          nullable: true
+        utr:
+          type: string
+          nullable: true
+      required: [eventType, amount, referenceId]
+
+    # DASHBOARD SCHEMA
+    Dashboard:
+      type: object
+      properties:
+        totalLenaHai:
+          type: number
+        totalDenaHai:
+          type: number
+        overdueAmount:
+          type: number
+        dueToday:
+          type: number
+        collectionThisMonth:
+          type: number
+        paymentsMadeThisMonth:
+          type: number
+        reconciliationPending:
+          type: integer
+        suspenseCredits:
+          type: number
+        verificationPending:
+          type: integer
+        disputedAmount:
+          type: number
+        followUpPending:
+          type: integer
+        highRiskParties:
+          type: integer
+        agingChart:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgingBucket"
+        collectionTrend:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionTrendPoint"
+        topReceivableParties:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopParty"
+        topPayableParties:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopParty"
+        recentPayments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        reconciliationHighlights:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationItem"
+      required: [totalLenaHai, totalDenaHai, overdueAmount, dueToday, collectionThisMonth, paymentsMadeThisMonth, reconciliationPending, suspenseCredits, verificationPending, disputedAmount, followUpPending, highRiskParties, agingChart, collectionTrend, topReceivableParties, topPayableParties, recentPayments, reconciliationHighlights]
+
+    CollectionTrendPoint:
+      type: object
+      properties:
+        month:
+          type: string
+        collected:
+          type: number
+        outstanding:
+          type: number
+      required: [month, collected, outstanding]
+
+    TopParty:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        mobile:
+          type: string
+          nullable: true
+        amount:
+          type: number
+        agingDays:
+          type: integer
+        balanceType:
+          type: string
+      required: [id, name, amount, agingDays, balanceType]
+
+    # REPORT SCHEMAS
+    ReceivableReportRow:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        partyName:
+          type: string
+        mobile:
+          type: string
+          nullable: true
+        amountDue:
+          type: number
+        agingDays:
+          type: integer
+        agingBucket:
+          type: string
+        lastFollowUpAt:
+          type: string
+          format: date-time
+          nullable: true
+        sourceType:
+          type: string
+          nullable: true
+        status:
+          type: string
+      required: [partyId, partyName, amountDue, agingDays, agingBucket, status]
+
+    PayableReportRow:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        partyName:
+          type: string
+        amountPayable:
+          type: number
+        sourceType:
+          type: string
+          nullable: true
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+      required: [partyId, partyName, amountPayable]
+
+    AgingReportRow:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        partyName:
+          type: string
+        agingBucket:
+          type: string
+        amount:
+          type: number
+        daysOverdue:
+          type: integer
+      required: [partyId, partyName, agingBucket, amount, daysOverdue]
+
+    CollectionReportRow:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        partyName:
+          type: string
+        amountCollected:
+          type: number
+        paymentDate:
+          type: string
+          format: date-time
+        paymentMode:
+          type: string
+        referenceNumber:
+          type: string
+          nullable: true
+      required: [partyId, partyName, amountCollected, paymentDate, paymentMode]
+
+    FollowUpReportRow:
+      type: object
+      properties:
+        partyId:
+          type: integer
+        partyName:
+          type: string
+        amount:
+          type: number
+          nullable: true
+        followUpStatus:
+          type: string
+        lastReminder:
+          type: string
+          format: date-time
+          nullable: true
+        nextFollowUp:
+          type: string
+          format: date-time
+          nullable: true
+      required: [partyId, partyName, followUpStatus]
+
+    ReconciliationReportRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        sourceType:
+          type: string
+        issueType:
+          type: string
+        amount:
+          type: number
+          nullable: true
+        status:
+          type: string
+        confidenceScore:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, sourceType, issueType, status, confidenceScore, createdAt]
+
+    SourceSyncReportRow:
+      type: object
+      properties:
+        sourceId:
+          type: integer
+        sourceName:
+          type: string
+        sourceType:
+          type: string
+        lastSyncAt:
+          type: string
+          format: date-time
+          nullable: true
+        recordsSynced:
+          type: integer
+        status:
+          type: string
+        errors:
+          type: integer
+      required: [sourceId, sourceName, sourceType, recordsSynced, status, errors]
+
+    PartyStatement:
+      type: object
+      properties:
+        party:
+          $ref: "#/components/schemas/Party"
+        openingBalance:
+          type: number
+        openingBalanceType:
+          type: string
+        closingBalance:
+          type: number
+        closingBalanceType:
+          type: string
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LedgerEntry"
+        totalDebits:
+          type: number
+        totalCredits:
+          type: number
+      required: [party, openingBalance, openingBalanceType, closingBalance, closingBalanceType, transactions, totalDebits, totalCredits]
