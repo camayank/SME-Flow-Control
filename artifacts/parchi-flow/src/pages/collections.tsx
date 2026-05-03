@@ -129,6 +129,18 @@ export default function CollectionsPage() {
         <p className="text-sm text-muted-foreground">WhatsApp reminders aur follow-up tracking</p>
       </div>
 
+      <Card className="border-dashed border-primary/25 bg-primary/5">
+        <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Collections playbook</p>
+            <p className="text-xs text-muted-foreground">Step-by-step follow-up, logging, and due tracking for every party.</p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/reports">View Reports</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="border-red-100">
@@ -151,6 +163,12 @@ export default function CollectionsPage() {
             <p className="text-xs text-muted-foreground">Total Due</p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+        <div className="rounded-lg bg-muted/40 px-3 py-2">Priority sorting first.</div>
+        <div className="rounded-lg bg-muted/40 px-3 py-2">Reminder can be copied or sent on WhatsApp.</div>
+        <div className="rounded-lg bg-muted/40 px-3 py-2">Every call/message can be logged.</div>
       </div>
 
       {/* Party list */}

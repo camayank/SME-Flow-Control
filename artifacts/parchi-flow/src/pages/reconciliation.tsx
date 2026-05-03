@@ -197,6 +197,18 @@ export default function ReconciliationPage() {
         <p className="text-sm text-muted-foreground">Unmatched aur suspicious transactions ko resolve karein</p>
       </div>
 
+      <Card className="border-dashed border-primary/25 bg-primary/5">
+        <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Reconciliation cockpit</p>
+            <p className="text-xs text-muted-foreground">Duplicate, suspense, and verification items ko step-by-step close karein.</p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/import">Import more</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Summary */}
       {summary && (
         <div className="grid grid-cols-4 gap-2">
@@ -215,6 +227,12 @@ export default function ReconciliationPage() {
           ))}
         </div>
       )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+        <div className="rounded-lg bg-muted/40 px-3 py-2">Match, assign, or keep separate.</div>
+        <div className="rounded-lg bg-muted/40 px-3 py-2">Suspense items can be resolved into party ledger entries.</div>
+        <div className="rounded-lg bg-muted/40 px-3 py-2">Verified items stay audit-friendly.</div>
+      </div>
 
       {isLoading ? (
         <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}</div>

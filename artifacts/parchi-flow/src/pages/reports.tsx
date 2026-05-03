@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { apiUrl, formatCurrency, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
-import { TrendingUp, TrendingDown, BarChart3, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, FileText, ReceiptText, Wallet, AlarmClock } from "lucide-react";
 
 interface ReceivablesReport {
   totalReceivables: number;
@@ -21,6 +22,13 @@ interface CollectionsReport {
   totalCollected: number;
   eventCount: number;
   avgPerDay: number;
+}
+
+interface PartyStatementSummary {
+  party: { id: number; name: string; mobile: string | null; gstin: string | null };
+  openingBalance: number;
+  closingBalance: number;
+  statement: { id: number; entryDate: string; entryType: string; narration: string | null; invoiceNumber: string | null; voucherNumber: string | null; debit: number | null; credit: number | null; balance: number }[];
 }
 
 const AGING_COLORS: Record<string, string> = {
@@ -66,6 +74,26 @@ export default function ReportsPage() {
     },
   });
 
+  const { data: sourceSync } = useQuery<{ sources: { id: number; sourceName: string; connectionStatus: string; recordsImported: number }[] }>({
+    queryKey: [apiUrl("/reports/source-sync")],
+    enabled: !!token,
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/reports/source-sync"), { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const { data: followUps } = useQuery<{ total: number; statusCounts: Record<string, number> }>({
+    queryKey: [apiUrl("/reports/follow-ups")],
+    enabled: !!token,
+    queryFn: async () => {
+      const res = await fetch(apiUrl("/reports/follow-ups"), { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
   const agingChartData = aging?.summary.filter(s => s.amount > 0).map(s => ({
     name: s.label,
     amount: s.amount,
@@ -106,10 +134,32 @@ export default function ReportsPage() {
         ))}
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2"><ReceiptText className="h-3.5 w-3.5" />Statements Ready</p>
+            <p className="text-xl font-bold mt-1">{receivables?.items.length || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2"><AlarmClock className="h-3.5 w-3.5" />Follow-ups</p>
+            <p className="text-xl font-bold mt-1">{followUps?.total || 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2"><Wallet className="h-3.5 w-3.5" />Connected Sources</p>
+            <p className="text-xl font-bold mt-1">{sourceSync?.sources.length || 0}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Tabs defaultValue="aging">
         <TabsList>
           <TabsTrigger value="aging">Aging Analysis</TabsTrigger>
           <TabsTrigger value="receivables">Receivables</TabsTrigger>
+          <TabsTrigger value="ops">Ops</TabsTrigger>
         </TabsList>
 
         {/* Aging */}
@@ -212,6 +262,36 @@ export default function ReportsPage() {
               <span className="text-sm font-bold text-red-600 flex-shrink-0">{formatCurrency(item.amountDue)}</span>
             </div>
           ))}
+        </TabsContent>
+
+        <TabsContent value="ops" className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Collections Follow-up Status</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {Object.entries(followUps?.statusCounts || {}).map(([status, count]) => (
+                <Badge key={status} variant="secondary">{status}: {count}</Badge>
+              ))}
+              {!Object.keys(followUps?.statusCounts || {}).length && <p className="text-sm text-muted-foreground">Koi follow-ups nahi</p>}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">Connected Data Sources</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {sourceSync?.sources?.length ? sourceSync.sources.map(source => (
+                <div key={source.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                  <div>
+                    <p className="font-medium">{source.sourceName}</p>
+                    <p className="text-xs text-muted-foreground">{source.connectionStatus}</p>
+                  </div>
+                  <Badge variant="outline">{source.recordsImported} imported</Badge>
+                </div>
+              )) : <p className="text-sm text-muted-foreground py-4 text-center">Koi source connected nahi</p>}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

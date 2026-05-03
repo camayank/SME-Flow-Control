@@ -5,8 +5,9 @@ import { apiPost } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Phone, ArrowLeft, TrendingUp, TrendingDown, FileText, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { MessageCircle, Phone, ArrowLeft, FileText, ArrowUpRight, ArrowDownRight, ReceiptText, Clock3, IndianRupee, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
@@ -69,6 +70,10 @@ export default function PartyDetailPage() {
     }
   };
 
+  const handlePrintStatement = () => {
+    window.print();
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 lg:p-6 space-y-4">
@@ -116,11 +121,15 @@ export default function PartyDetailPage() {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           {party.mobile && (
-            <Button size="sm" variant="outline" className="gap-1.5 text-emerald-700 border-emerald-200" onClick={handleSendReminder} disabled={isGenerating}>
+            <Button type="button" size="sm" variant="outline" className="gap-1.5 text-emerald-700 border-emerald-200" onClick={handleSendReminder} disabled={isGenerating}>
               <MessageCircle className="h-4 w-4" />
               Remind
             </Button>
           )}
+          <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={handlePrintStatement}>
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
         </div>
       </div>
 
@@ -154,6 +163,16 @@ export default function PartyDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-dashed border-primary/20 bg-primary/5">
+        <CardContent className="py-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium flex items-center gap-2"><ReceiptText className="h-4 w-4" />Invoice-style statement</p>
+            <p className="text-xs text-muted-foreground">Party ledger, due dates, and reminders in one screen.</p>
+          </div>
+          <Badge variant="secondary">{entries.length} rows</Badge>
+        </CardContent>
+      </Card>
 
       {/* Ledger entries */}
       <Card>
@@ -201,6 +220,41 @@ export default function PartyDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Tabs defaultValue="summary">
+        <TabsList>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+        </TabsList>
+        <TabsContent value="summary" className="mt-4">
+          <Card>
+            <CardContent className="py-4 space-y-3">
+              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Opening</span><span className="font-medium">{formatCurrency(summary.totalInvoices - summary.totalPaymentsReceived)}</span></div>
+              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Closing balance</span><span className="font-semibold">{formatCurrency(party.currentBalance)}</span></div>
+              <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Risk score</span><span className="font-semibold">{summary.riskScore ?? "—"}</span></div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="timeline" className="mt-4">
+          <Card>
+            <CardContent className="py-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium"><Clock3 className="h-4 w-4" />Next follow-up</div>
+              <p className="text-sm text-muted-foreground">{summary.nextFollowUpAt ? formatDate(summary.nextFollowUpAt) : "No follow-up scheduled"}</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <style>{`
+        @media print {
+          button, nav, aside, .no-print {
+            display: none !important;
+          }
+          body {
+            background: white !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
