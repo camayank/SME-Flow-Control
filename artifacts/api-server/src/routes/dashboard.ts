@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   partiesTable, outstandingsTable, moneyEventsTable, reconciliationQueueTable,
-  followUpsTable, ledgerEntriesTable, businessesTable,
+  followUpsTable, ledgerEntriesTable, businessesTable, auditLogsTable,
 } from "@workspace/db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth.js";
@@ -20,7 +20,9 @@ router.get("/dashboard", authMiddleware, async (req: AuthRequest, res) => {
   const businessId = await getBusinessId(req.userId!);
   if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
 
-  const [parties, outstandings, moneyEvents, reconQueue, followUps] = await Promise.all([
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const [parties, outstandings, moneyEvents, reconQueue, followUps, audits] = await Promise.all([
     db.select().from(partiesTable).where(eq(partiesTable.businessId, businessId)),
     db.select().from(outstandingsTable).where(and(eq(outstandingsTable.businessId, businessId), eq(outstandingsTable.status, "open"))),
     db.select().from(moneyEventsTable).where(
@@ -32,6 +34,7 @@ router.get("/dashboard", authMiddleware, async (req: AuthRequest, res) => {
     db.select().from(followUpsTable).where(
       and(eq(followUpsTable.businessId, businessId), eq(followUpsTable.status, "pending"))
     ),
+    db.select().from(auditLogsTable).where(and(eq(auditLogsTable.businessId, businessId), gte(auditLogsTable.createdAt, todayStart))),
   ]);
 
   // Cash flow calculations (last 30 days)
@@ -90,6 +93,12 @@ router.get("/dashboard", authMiddleware, async (req: AuthRequest, res) => {
   }
 
   res.json({
+    today: {
+      activityCount: audits.length,
+      entriesCreated: audits.filter(a => a.entityType === "invoice" || a.entityType === "ledger_entry" || a.entityType === "money_event").length,
+      partiesTouched: new Set(audits.map(a => a.entityId)).size,
+      followUpsCreated: audits.filter(a => a.entityType === "follow_up" && a.action === "create").length,
+    },
     cashFlow: {
       inflows,
       outflows,

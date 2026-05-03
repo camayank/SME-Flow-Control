@@ -18,6 +18,7 @@ import {
 } from "recharts";
 
 interface DashboardData {
+  today?: { activityCount: number; entriesCreated: number; partiesTouched: number; followUpsCreated: number };
   cashFlow: { inflows: number; outflows: number; netCashFlow: number; period: string };
   outstandings: { totalReceivables: number; totalPayables: number; netPosition: number };
   overdue: { amount: number; count: number };
@@ -141,6 +142,23 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      <Card className="border-emerald-200 bg-emerald-50/60">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">What changed today</p>
+              <p className="text-xs text-emerald-900/75 mt-1">This helps users see real activity, not just static totals.</p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-white px-2.5 py-1 border border-emerald-200">Actions: {data?.today?.activityCount || 0}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-emerald-200">Entries: {data?.today?.entriesCreated || 0}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-emerald-200">Parties: {data?.today?.partiesTouched || 0}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-emerald-200">Follow-ups: {data?.today?.followUpsCreated || 0}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-primary/15 bg-primary/5">
         <CardContent className="pt-4 pb-4 space-y-3">
