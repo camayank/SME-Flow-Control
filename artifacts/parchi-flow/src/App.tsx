@@ -18,13 +18,12 @@ import ReportsPage from "@/pages/reports";
 import ItemsPage from "@/pages/items";
 import InvoicesPage from "@/pages/invoices";
 import AuditPage from "@/pages/audit";
+import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 30000, retry: 1 },
-  },
+  defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
 });
 
 function AppContent() {
@@ -68,6 +67,7 @@ function AppContent() {
         <Route path="/invoices" component={InvoicesPage} />
         <Route path="/items" component={ItemsPage} />
         <Route path="/audit" component={AuditPage} />
+        <Route path="/settings" component={SettingsPage} />
         <Route path="/parties" component={PartiesPage} />
         <Route path="/parties/:id" component={PartyDetailPage} />
         <Route path="/outstandings" component={OutstandingsPage} />
@@ -85,7 +85,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "") }>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
             <AppContent />
           </AuthProvider>

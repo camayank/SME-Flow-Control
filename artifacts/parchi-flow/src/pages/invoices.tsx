@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiUrl, apiPost, apiPut, getAuthToken, formatCurrency, formatDate } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,53 +12,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, ReceiptText, Printer, Search, Trash2, CheckCircle, X, IndianRupee } from "lucide-react";
+import {
+  Plus, ReceiptText, Printer, Search, X, CheckCircle,
+  MessageCircle, ArrowRightCircle, Share2,
+} from "lucide-react";
 
 interface Item {
-  id: number;
-  name: string;
-  hsn: string | null;
-  unit: string;
-  salePrice: number;
-  purchasePrice: number;
-  gstRate: number;
+  id: number; name: string; hsn: string | null; unit: string;
+  salePrice: number; purchasePrice: number; gstRate: number;
 }
 
 interface LineItem {
-  itemId?: number;
-  name: string;
-  hsn: string;
-  unit: string;
-  qty: number;
-  rate: number;
-  amount: number;
-  gstRate: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
-  lineTotal: number;
+  itemId?: number; name: string; hsn: string; unit: string; qty: number; rate: number;
+  amount: number; gstRate: number; cgst: number; sgst: number; igst: number; lineTotal: number;
 }
 
 interface Invoice {
-  id: number;
-  invoiceNumber: string;
-  invoiceType: string;
-  invoiceDate: string;
-  dueDate: string | null;
-  partyId: number | null;
-  partyName: string | null;
-  partyGstin: string | null;
-  partyAddress: string | null;
-  subtotal: number;
-  cgstTotal: number;
-  sgstTotal: number;
-  igstTotal: number;
-  total: number;
-  amountPaid: number;
-  balanceDue: number;
-  status: string;
-  notes: string | null;
-  items: LineItem[];
+  id: number; invoiceNumber: string; invoiceType: string; invoiceDate: string;
+  dueDate: string | null; partyId: number | null; partyName: string | null;
+  partyGstin: string | null; partyAddress: string | null;
+  subtotal: number; cgstTotal: number; sgstTotal: number; igstTotal: number;
+  total: number; amountPaid: number; balanceDue: number; status: string;
+  notes: string | null; terms: string | null; isInterState: boolean; items: LineItem[];
 }
 
 interface Party { id: number; name: string; gstin: string | null; mobile: string | null }
@@ -68,16 +43,16 @@ const STATUS_COLORS: Record<string, string> = {
   paid: "text-emerald-600 bg-emerald-50 border-emerald-200",
   partially_paid: "text-amber-600 bg-amber-50 border-amber-200",
   cancelled: "text-slate-500 bg-slate-50 border-slate-200",
+  draft: "text-blue-600 bg-blue-50 border-blue-200",
 };
 
 const DRAFT_KEY = "parchiflow_invoice_draft";
 
-function calcLine(qty: number, rate: number, gstRate: number, isInterState: boolean): Omit<LineItem, "name" | "hsn" | "unit" | "itemId"> {
+function calcLine(qty: number, rate: number, gstRate: number, isInterState: boolean) {
   const amount = qty * rate;
   const gstAmt = amount * gstRate / 100;
   return {
-    qty, rate, amount,
-    gstRate,
+    qty, rate, amount, gstRate,
     cgst: isInterState ? 0 : gstAmt / 2,
     sgst: isInterState ? 0 : gstAmt / 2,
     igst: isInterState ? gstAmt : 0,
@@ -90,6 +65,29 @@ const emptyLine = (): LineItem => ({
   amount: 0, gstRate: 18, cgst: 0, sgst: 0, igst: 0, lineTotal: 0,
 });
 
+function getEmptyForm(type: string) {
+  return {
+    invoiceType: type,
+    invoiceDate: new Date().toISOString().split("T")[0],
+    dueDate: "",
+    partyId: null as number | null,
+    partyName: "",
+    partyGstin: "",
+    partyAddress: "",
+    isInterState: false,
+    notes: "",
+    terms: "Payment due within 30 days.",
+    items: [emptyLine()],
+  };
+}
+
+function whatsappText(inv: Invoice, businessName: string) {
+  const lines = inv.items.map(it => `  • ${it.name} × ${it.qty} = ₹${it.lineTotal.toFixed(0)}`).join("\n");
+  return encodeURIComponent(
+    `*${businessName}*\nInvoice: ${inv.invoiceNumber}\nDate: ${new Date(inv.invoiceDate).toLocaleDateString("en-IN")}\n\n${lines}\n\n*Total: ₹${inv.total.toFixed(0)}*\n${inv.balanceDue > 0 ? `*Balance Due: ₹${inv.balanceDue.toFixed(0)}*` : "✅ Paid"}`
+  );
+}
+
 export default function InvoicesPage() {
   const token = getAuthToken();
   const { business } = useAuth();
@@ -101,38 +99,19 @@ export default function InvoicesPage() {
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
   const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
+  const [partySearch, setPartySearch] = useState("");
 
   const [form, setForm] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") || getEmptyForm("sale"); } catch { return getEmptyForm("sale"); }
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") || getEmptyForm("sale"); }
+    catch { return getEmptyForm("sale"); }
   });
 
-  function getEmptyForm(type: string) {
-    return {
-      invoiceType: type,
-      invoiceDate: new Date().toISOString().split("T")[0],
-      dueDate: "",
-      partyId: null as number | null,
-      partyName: "",
-      partyGstin: "",
-      partyAddress: "",
-      isInterState: false,
-      notes: "",
-      terms: "Payment due within 30 days.",
-      items: [emptyLine()],
-    };
-  }
-
-  const saveDraft = (f: typeof form) => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(f));
-  };
-
+  const saveDraft = (f: typeof form) => localStorage.setItem(DRAFT_KEY, JSON.stringify(f));
   const updateForm = (update: Partial<typeof form>) => {
     const next = { ...form, ...update };
     setForm(next);
     saveDraft(next);
   };
-
-  const [partySearch, setPartySearch] = useState("");
 
   const { data: invoices, isLoading } = useQuery<Invoice[]>({
     queryKey: [apiUrl(`/invoices?type=${tab}`)],
@@ -173,11 +152,11 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: [apiUrl(`/invoices?type=${tab}`)] });
       queryClient.invalidateQueries({ queryKey: [apiUrl("/items")] });
       queryClient.invalidateQueries({ queryKey: [apiUrl("/outstandings")] });
-      toast({ title: `Invoice ${inv.invoiceNumber} created!` });
+      toast({ title: `${inv.invoiceType === "quotation" ? "Quotation" : "Invoice"} ${inv.invoiceNumber} created!` });
       localStorage.removeItem(DRAFT_KEY);
       setNewOpen(false);
       setForm(getEmptyForm(tab));
-      setPrintInvoice(inv);
+      if (inv.invoiceType !== "quotation") setPrintInvoice(inv);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -188,6 +167,24 @@ export default function InvoicesPage() {
       queryClient.invalidateQueries({ queryKey: [apiUrl(`/invoices?type=${tab}`)] });
       toast({ title: "Invoice marked as paid!" });
     },
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: async ({ id }: { id: number }) => {
+      const res = await fetch(apiUrl(`/invoices/${id}/convert`), {
+        method: "POST", headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Conversion failed");
+      return res.json() as Promise<Invoice>;
+    },
+    onSuccess: (inv) => {
+      queryClient.invalidateQueries({ queryKey: [apiUrl("/invoices?type=sale")] });
+      queryClient.invalidateQueries({ queryKey: [apiUrl("/invoices?type=quotation")] });
+      queryClient.invalidateQueries({ queryKey: [apiUrl("/items")] });
+      toast({ title: `Converted to Invoice ${inv.invoiceNumber}!` });
+      setPrintInvoice(inv);
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const filteredInvoices = (invoices || []).filter(inv =>
@@ -235,29 +232,23 @@ export default function InvoicesPage() {
     !partySearch || p.name.toLowerCase().includes(partySearch.toLowerCase())
   ).slice(0, 5);
 
-  const handlePrint = () => {
-    if (!printInvoice) return;
-    window.print();
-  };
-
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <ReceiptText className="h-5 w-5" /> Invoices
-          </h1>
-          <p className="text-sm text-muted-foreground">GST invoices, credit/debit notes</p>
+          <h1 className="text-xl font-bold flex items-center gap-2"><ReceiptText className="h-5 w-5" />Invoices</h1>
+          <p className="text-sm text-muted-foreground">GST invoices, quotations, credit/debit notes</p>
         </div>
         <Button size="sm" className="gap-1.5" onClick={() => { setForm(getEmptyForm(tab)); setNewOpen(true); }}>
-          <Plus className="h-4 w-4" /> New Invoice
+          <Plus className="h-4 w-4" /> New
         </Button>
       </div>
 
-      <Tabs value={tab} onValueChange={v => { setTab(v); }}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={v => setTab(v)}>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="sale">Sales</TabsTrigger>
           <TabsTrigger value="purchase">Purchase</TabsTrigger>
+          <TabsTrigger value="quotation">Quotations</TabsTrigger>
           <TabsTrigger value="credit_note">Credit Notes</TabsTrigger>
           <TabsTrigger value="debit_note">Debit Notes</TabsTrigger>
         </TabsList>
@@ -272,11 +263,13 @@ export default function InvoicesPage() {
             <div className="text-center py-8 text-sm text-muted-foreground">Loading...</div>
           ) : !filteredInvoices.length ? (
             <Card className="border-dashed">
-              <CardContent className="py-12 text-center space-y-3">
+              <div className="py-12 text-center space-y-3">
                 <ReceiptText className="h-10 w-10 mx-auto text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">Koi invoice nahi hai</p>
-                <Button size="sm" onClick={() => { setForm(getEmptyForm(tab)); setNewOpen(true); }}>Pehla Invoice Banao</Button>
-              </CardContent>
+                <p className="text-sm text-muted-foreground">Koi {tab === "quotation" ? "quotation" : "invoice"} nahi hai</p>
+                <Button size="sm" onClick={() => { setForm(getEmptyForm(tab)); setNewOpen(true); }}>
+                  Pehla {tab === "quotation" ? "Quotation" : "Invoice"} Banao
+                </Button>
+              </div>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -287,6 +280,7 @@ export default function InvoicesPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold font-mono">{inv.invoiceNumber}</span>
                         <Badge variant="outline" className={`text-xs ${STATUS_COLORS[inv.status] || ""}`}>{inv.status}</Badge>
+                        {inv.isInterState && <Badge variant="outline" className="text-xs">IGST</Badge>}
                       </div>
                       <div className="flex flex-wrap gap-2 mt-0.5 text-xs text-muted-foreground">
                         <span>{inv.partyName || "—"}</span>
@@ -295,14 +289,35 @@ export default function InvoicesPage() {
                         {inv.partyGstin && <span>GST: {inv.partyGstin}</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="text-right">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="text-right mr-1">
                         <p className="text-sm font-bold">{formatCurrency(inv.total)}</p>
                         {inv.balanceDue > 0 && <p className="text-xs text-red-500">Due: {formatCurrency(inv.balanceDue)}</p>}
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Print" onClick={() => setPrintInvoice(inv)}>
+                      {/* Quotation: convert to invoice */}
+                      {inv.invoiceType === "quotation" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Convert to Invoice"
+                          disabled={convertMutation.isPending}
+                          onClick={() => convertMutation.mutate({ id: inv.id })}>
+                          <ArrowRightCircle className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {/* Print */}
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Print / Preview"
+                        onClick={() => setPrintInvoice(inv)}>
                         <Printer className="h-3.5 w-3.5" />
                       </Button>
+                      {/* WhatsApp share */}
+                      {inv.partyId && (
+                        <a
+                          href={`https://wa.me/?text=${whatsappText(inv, business?.businessName || "")}`}
+                          target="_blank" rel="noopener noreferrer"
+                          title="Share on WhatsApp"
+                          className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-emerald-50 text-emerald-600">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </a>
+                      )}
+                      {/* Mark paid */}
                       {inv.status === "unpaid" && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" title="Mark Paid"
                           onClick={() => markPaidMutation.mutate({ id: inv.id })}>
@@ -318,19 +333,21 @@ export default function InvoicesPage() {
         </TabsContent>
       </Tabs>
 
-      {/* New Invoice Dialog */}
+      {/* New Invoice / Quotation Dialog */}
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {tab === "sale" ? "New Sales Invoice" : tab === "purchase" ? "New Purchase Invoice" : tab === "credit_note" ? "Credit Note" : "Debit Note"}
+              {tab === "sale" ? "New Sales Invoice" : tab === "purchase" ? "New Purchase Invoice" :
+               tab === "quotation" ? "New Quotation" : tab === "credit_note" ? "Credit Note" : "Debit Note"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Party */}
             <div>
               <Label>Party Name</Label>
-              <Input className="mt-1" placeholder="Party ka naam..." value={form.partyName}
+              <Input className="mt-1" placeholder="Party ka naam..."
+                value={form.partyName}
                 onChange={e => { updateForm({ partyName: e.target.value, partyId: null }); setPartySearch(e.target.value); }} />
               {partySearch && filteredParties.length > 0 && (
                 <div className="border rounded-md bg-background shadow-sm mt-1 max-h-36 overflow-y-auto z-10">
@@ -347,16 +364,16 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>GSTIN (Party)</Label>
-                <Input className="mt-1 font-mono text-sm" placeholder="22AAAAA0000A1Z5" value={form.partyGstin}
-                  onChange={e => updateForm({ partyGstin: e.target.value })} />
+                <Input className="mt-1 font-mono text-sm" placeholder="22AAAAA0000A1Z5"
+                  value={form.partyGstin} onChange={e => updateForm({ partyGstin: e.target.value })} />
               </div>
               <div>
-                <Label>Invoice Date</Label>
+                <Label>{tab === "quotation" ? "Quotation Date" : "Invoice Date"}</Label>
                 <Input className="mt-1" type="date" value={form.invoiceDate}
                   onChange={e => updateForm({ invoiceDate: e.target.value })} />
               </div>
               <div>
-                <Label>Due Date</Label>
+                <Label>{tab === "quotation" ? "Valid Until" : "Due Date"}</Label>
                 <Input className="mt-1" type="date" value={form.dueDate}
                   onChange={e => updateForm({ dueDate: e.target.value })} />
               </div>
@@ -371,7 +388,7 @@ export default function InvoicesPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Items</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {items?.items.slice(0, 3).map(it => (
                     <Button key={it.id} variant="outline" size="sm" className="text-xs h-7"
                       onClick={() => addLineFromItem(it)}>
@@ -383,12 +400,9 @@ export default function InvoicesPage() {
 
               <div className="rounded-lg border overflow-hidden">
                 <div className="grid grid-cols-12 gap-1 px-3 py-1.5 bg-muted text-xs font-medium text-muted-foreground">
-                  <div className="col-span-4">Item</div>
-                  <div className="col-span-1">Qty</div>
-                  <div className="col-span-2">Rate</div>
-                  <div className="col-span-1 text-center">GST%</div>
-                  <div className="col-span-2 text-right">Total</div>
-                  <div className="col-span-2"></div>
+                  <div className="col-span-4">Item</div><div className="col-span-1">Qty</div>
+                  <div className="col-span-2">Rate</div><div className="col-span-1 text-center">GST%</div>
+                  <div className="col-span-2 text-right">Total</div><div className="col-span-2" />
                 </div>
                 {form.items.map((line, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-1 px-3 py-1.5 border-t items-center">
@@ -412,10 +426,11 @@ export default function InvoicesPage() {
                     </div>
                     <div className="col-span-2 text-right text-xs font-medium">{formatCurrency(line.lineTotal)}</div>
                     <div className="col-span-2 flex justify-end">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                        const lines = form.items.filter((_, i) => i !== idx);
-                        updateForm({ items: lines.length ? lines : [emptyLine()] });
-                      }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={() => {
+                          const lines = form.items.filter((_, i) => i !== idx);
+                          updateForm({ items: lines.length ? lines : [emptyLine()] });
+                        }}>
                         <X className="h-3.5 w-3.5 text-destructive" />
                       </Button>
                     </div>
@@ -446,33 +461,48 @@ export default function InvoicesPage() {
             </div>
 
             <div>
-              <Label>Notes</Label>
+              <Label>Notes / Terms</Label>
               <Textarea className="mt-1" rows={2} placeholder="Terms, remarks..." value={form.notes}
                 onChange={e => updateForm({ notes: e.target.value })} />
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => { saveDraft(form); setNewOpen(false); toast({ title: "Draft saved!" }); }}>
+              <Button variant="outline" className="flex-1"
+                onClick={() => { saveDraft(form); setNewOpen(false); toast({ title: "Draft saved!" }); }}>
                 Save Draft
               </Button>
-              <Button className="flex-1" disabled={createMutation.isPending || !form.items.some(i => i.name)}
+              <Button className="flex-1"
+                disabled={createMutation.isPending || !form.items.some(i => i.name)}
                 onClick={() => createMutation.mutate(form)}>
-                {createMutation.isPending ? "Creating..." : "Create Invoice"}
+                {createMutation.isPending ? "Creating..." : tab === "quotation" ? "Create Quotation" : "Create Invoice"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Print Dialog */}
+      {/* Print / Share Dialog */}
       <Dialog open={!!printInvoice} onOpenChange={() => setPrintInvoice(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Invoice Preview</DialogTitle>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={handlePrint}>
-                <Printer className="h-4 w-4" /> Print / Download
-              </Button>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <DialogTitle>
+                {printInvoice?.invoiceType === "quotation" ? "Quotation Preview" : "Invoice Preview"}
+              </DialogTitle>
+              <div className="flex gap-2">
+                {printInvoice && (
+                  <a
+                    href={`https://wa.me/?text=${whatsappText(printInvoice, business?.businessName || "")}`}
+                    target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="outline" className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                      <Share2 className="h-3.5 w-3.5" /> WhatsApp
+                    </Button>
+                  </a>
+                )}
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4" /> Print / PDF
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           {printInvoice && (
@@ -481,15 +511,23 @@ export default function InvoicesPage() {
               <div className="flex items-start justify-between border-b pb-4">
                 <div>
                   <p className="text-lg font-bold">{business?.businessName}</p>
-                  <p className="text-xs text-muted-foreground">{business?.city}, {business?.state}</p>
+                  <p className="text-xs text-muted-foreground">{business?.city}{business?.state ? `, ${business.state}` : ""}</p>
                   {business?.gstin && <p className="text-xs font-mono text-muted-foreground">GSTIN: {business.gstin}</p>}
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                    {printInvoice.invoiceType === "sale" ? "Tax Invoice" : printInvoice.invoiceType === "purchase" ? "Purchase Invoice" : printInvoice.invoiceType.replace(/_/g, " ")}
+                    {printInvoice.invoiceType === "sale" ? "Tax Invoice"
+                      : printInvoice.invoiceType === "quotation" ? "Quotation"
+                      : printInvoice.invoiceType === "purchase" ? "Purchase Invoice"
+                      : printInvoice.invoiceType.replace(/_/g, " ")}
                   </p>
                   <p className="text-base font-bold font-mono mt-1">{printInvoice.invoiceNumber}</p>
                   <p className="text-xs text-muted-foreground">{formatDate(printInvoice.invoiceDate)}</p>
+                  {printInvoice.dueDate && (
+                    <p className="text-xs text-muted-foreground">
+                      {printInvoice.invoiceType === "quotation" ? "Valid till" : "Due"}: {formatDate(printInvoice.dueDate)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -497,14 +535,17 @@ export default function InvoicesPage() {
               {printInvoice.partyName && (
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Bill To</p>
+                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">
+                      {printInvoice.invoiceType === "purchase" ? "Supplier" : "Bill To"}
+                    </p>
                     <p className="font-semibold">{printInvoice.partyName}</p>
                     {printInvoice.partyGstin && <p className="text-xs font-mono text-muted-foreground">GSTIN: {printInvoice.partyGstin}</p>}
                     {printInvoice.partyAddress && <p className="text-xs text-muted-foreground">{printInvoice.partyAddress}</p>}
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase font-medium mb-1">Due Date</p>
-                    <p className="text-sm">{printInvoice.dueDate ? formatDate(printInvoice.dueDate) : "—"}</p>
+                    {printInvoice.isInterState && (
+                      <p className="text-xs text-muted-foreground mt-1">Supply Type: <span className="font-medium">Inter-State</span></p>
+                    )}
                   </div>
                 </div>
               )}
@@ -533,7 +574,10 @@ export default function InvoicesPage() {
                         <td className="py-2 px-2 text-right">{it.qty}</td>
                         <td className="py-2 px-2 text-right">{formatCurrency(it.rate)}</td>
                         <td className="py-2 px-2 text-right">{formatCurrency(it.amount)}</td>
-                        <td className="py-2 px-2 text-right text-xs">{it.gstRate}%<br /><span className="text-muted-foreground">{formatCurrency(it.cgst + it.sgst + it.igst)}</span></td>
+                        <td className="py-2 px-2 text-right text-xs">
+                          {it.gstRate}%<br />
+                          <span className="text-muted-foreground">{formatCurrency(it.cgst + it.sgst + it.igst)}</span>
+                        </td>
                         <td className="py-2 px-2 text-right font-semibold">{formatCurrency(it.lineTotal)}</td>
                       </tr>
                     ))}
@@ -543,7 +587,7 @@ export default function InvoicesPage() {
 
               {/* Totals */}
               <div className="flex justify-end">
-                <div className="w-56 space-y-1.5 text-sm">
+                <div className="w-60 space-y-1.5 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Taxable Amount</span><span>{formatCurrency(printInvoice.subtotal)}</span></div>
                   {printInvoice.cgstTotal > 0 && <div className="flex justify-between"><span className="text-muted-foreground">CGST</span><span>{formatCurrency(printInvoice.cgstTotal)}</span></div>}
                   {printInvoice.sgstTotal > 0 && <div className="flex justify-between"><span className="text-muted-foreground">SGST</span><span>{formatCurrency(printInvoice.sgstTotal)}</span></div>}
@@ -556,13 +600,24 @@ export default function InvoicesPage() {
                       <span>Balance Due</span><span>{formatCurrency(printInvoice.balanceDue)}</span>
                     </div>
                   )}
+                  {printInvoice.status === "paid" && (
+                    <div className="flex justify-between text-emerald-600 font-medium">
+                      <span>Status</span><span>✅ PAID</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Notes + Footer */}
               {printInvoice.notes && (
                 <div className="border-t pt-3 text-xs text-muted-foreground">
-                  <p className="font-medium mb-0.5">Notes</p>
+                  <p className="font-medium text-foreground mb-1">Notes / Terms</p>
                   <p>{printInvoice.notes}</p>
+                </div>
+              )}
+              {business?.upiId && (
+                <div className="border-t pt-3 text-xs">
+                  <p className="text-muted-foreground">UPI Payment: <span className="font-mono font-medium text-foreground">{business.upiId}</span></p>
                 </div>
               )}
             </div>

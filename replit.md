@@ -38,7 +38,10 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `POST /api/auth/logout` — logout
 
 ### Business
-- `GET/POST/PUT /api/business` — CRUD business profile
+- `GET /api/business` — returns `{business, businesses[]}` for multi-business
+- `POST /api/business` — create or update first business
+- `POST /api/business/new` — always create a NEW business entity (multi-business)
+- `PUT /api/business` — update specific business by `businessId` in body
 
 ### Parties
 - `GET/POST /api/parties` — list/create parties
@@ -54,10 +57,11 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 
 ### Invoices (GST-aware)
 - `GET /api/invoices` — list invoices (with filters: type, status, party, search)
-- `POST /api/invoices` — create invoice (auto-numbers INV/PUR/CN/DN, auto-creates ledger+outstanding, adjusts stock)
+- `POST /api/invoices` — create invoice/quotation (auto-numbers INV/PUR/CN/DN/QUO, auto-creates ledger+outstanding, adjusts stock; quotations skip ledger/stock)
 - `GET /api/invoices/:id` — invoice detail with line items
 - `PUT /api/invoices/:id/mark-paid` — mark invoice as paid
-- `PUT /api/invoices/:id/cancel` — cancel invoice
+- `DELETE /api/invoices/:id` — cancel invoice
+- `POST /api/invoices/:id/convert` — convert quotation → sales invoice (creates ledger, adjusts stock)
 
 ### Parchi (Money Events)
 - `POST /api/parchi/parse` — parse Hinglish/Hindi/English text

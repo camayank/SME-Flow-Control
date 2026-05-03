@@ -20,13 +20,11 @@ router.get("/businesses", authMiddleware, async (req: AuthRequest, res) => {
   res.json({ businesses: businesses.map(formatBusiness) });
 });
 
+// Update existing (first) business
 router.post("/business", authMiddleware, async (req: AuthRequest, res) => {
   const existing = await db.select().from(businessesTable).where(eq(businessesTable.userId, req.userId!));
   const { businessName, businessType, city, state, gstin, upiId, preferredLanguage, existingSystem } = req.body;
-  if (!businessName) {
-    res.status(400).json({ error: "Business name is required" });
-    return;
-  }
+  if (!businessName) { res.status(400).json({ error: "Business name is required" }); return; }
   if (existing.length) {
     const updated = await db.update(businessesTable).set({
       businessName,
@@ -43,50 +41,58 @@ router.post("/business", authMiddleware, async (req: AuthRequest, res) => {
     return;
   }
   const inserted = await db.insert(businessesTable).values({
-    userId: req.userId!, businessName, businessType: businessType || "retail", city, state, gstin, upiId,
-    preferredLanguage: preferredLanguage || "hinglish", existingSystem,
+    userId: req.userId!, businessName, businessType: businessType || "retail",
+    city, state, gstin, upiId, preferredLanguage: preferredLanguage || "hinglish", existingSystem,
   }).returning();
   await db.insert(dataSourcesTable).values({
-    userId: req.userId!, businessId: inserted[0].id, sourceType: "manual", sourceName: "Manual Parchi",
-    connectionStatus: "connected", recordsImported: 0,
+    userId: req.userId!, businessId: inserted[0].id, sourceType: "manual",
+    sourceName: "Manual Parchi", connectionStatus: "connected", recordsImported: 0,
+  });
+  res.status(201).json(formatBusiness(inserted[0]));
+});
+
+// Always creates a brand-new business entity
+router.post("/business/new", authMiddleware, async (req: AuthRequest, res) => {
+  const { businessName, businessType, city, state, gstin, upiId, preferredLanguage, existingSystem } = req.body;
+  if (!businessName) { res.status(400).json({ error: "Business name is required" }); return; }
+  const inserted = await db.insert(businessesTable).values({
+    userId: req.userId!, businessName, businessType: businessType || "retail",
+    city: city || null, state: state || null, gstin: gstin || null, upiId: upiId || null,
+    preferredLanguage: preferredLanguage || "hinglish", existingSystem: existingSystem || "none",
+  }).returning();
+  await db.insert(dataSourcesTable).values({
+    userId: req.userId!, businessId: inserted[0].id, sourceType: "manual",
+    sourceName: "Manual Parchi", connectionStatus: "connected", recordsImported: 0,
   });
   res.status(201).json(formatBusiness(inserted[0]));
 });
 
 router.put("/business", authMiddleware, async (req: AuthRequest, res) => {
   const existing = await db.select().from(businessesTable).where(eq(businessesTable.userId, req.userId!));
-  if (!existing.length) {
-    res.status(404).json({ error: "Business not found" });
-    return;
-  }
-  const { businessName, businessType, city, state, gstin, upiId, preferredLanguage, existingSystem } = req.body;
+  if (!existing.length) { res.status(404).json({ error: "Business not found" }); return; }
+  const { businessName, businessType, city, state, gstin, upiId, preferredLanguage, existingSystem, businessId } = req.body;
+  const target = businessId ? existing.find(b => b.id === parseInt(businessId)) : existing[0];
+  if (!target) { res.status(404).json({ error: "Business not found" }); return; }
   const updated = await db.update(businessesTable).set({
-    businessName: businessName || existing[0].businessName,
-    businessType: businessType || existing[0].businessType,
-    city: city !== undefined ? city : existing[0].city,
-    state: state !== undefined ? state : existing[0].state,
-    gstin: gstin !== undefined ? gstin : existing[0].gstin,
-    upiId: upiId !== undefined ? upiId : existing[0].upiId,
-    preferredLanguage: preferredLanguage || existing[0].preferredLanguage,
-    existingSystem: existingSystem !== undefined ? existingSystem : existing[0].existingSystem,
+    businessName: businessName || target.businessName,
+    businessType: businessType || target.businessType,
+    city: city !== undefined ? city : target.city,
+    state: state !== undefined ? state : target.state,
+    gstin: gstin !== undefined ? gstin : target.gstin,
+    upiId: upiId !== undefined ? upiId : target.upiId,
+    preferredLanguage: preferredLanguage || target.preferredLanguage,
+    existingSystem: existingSystem !== undefined ? existingSystem : target.existingSystem,
     updatedAt: new Date(),
-  }).where(eq(businessesTable.id, existing[0].id)).returning();
+  }).where(eq(businessesTable.id, target.id)).returning();
   res.json(formatBusiness(updated[0]));
 });
 
 function formatBusiness(b: typeof businessesTable.$inferSelect) {
   return {
-    id: b.id,
-    userId: b.userId,
-    businessName: b.businessName,
-    businessType: b.businessType,
-    city: b.city,
-    state: b.state,
-    gstin: b.gstin,
-    upiId: b.upiId,
-    preferredLanguage: b.preferredLanguage,
-    existingSystem: b.existingSystem,
-    createdAt: b.createdAt,
+    id: b.id, userId: b.userId, businessName: b.businessName,
+    businessType: b.businessType, city: b.city, state: b.state,
+    gstin: b.gstin, upiId: b.upiId, preferredLanguage: b.preferredLanguage,
+    existingSystem: b.existingSystem, createdAt: b.createdAt,
   };
 }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { apiUrl, getAuthToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Users, Receipt, RefreshCw,
   MessageCircle, Database, BarChart3, LogOut,
-  Menu, X, ChevronRight, Plus, Package, ReceiptText, ChevronDown,
+  Menu, X, ChevronRight, Plus, Package, ReceiptText,
+  ShieldAlert, Settings, ChevronDown, Check,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -22,15 +23,19 @@ const NAV_ITEMS = [
   { href: "/reconciliation", icon: RefreshCw, label: "Reconciliation" },
   { href: "/import", icon: Database, label: "Import / Sources" },
   { href: "/reports", icon: BarChart3, label: "Reports" },
+  { href: "/audit", icon: ShieldAlert, label: "Audit Trail" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 interface LayoutProps { children: React.ReactNode }
 
 export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bizOpen, setBizOpen] = useState(false);
   const [location] = useLocation();
-  const { user, business, logout, setBusiness, refreshBusiness } = useAuth();
+  const { user, business, logout, setBusiness } = useAuth();
   const token = getAuthToken();
+  const qc = useQueryClient();
 
   const { data: businessesData } = useQuery({
     queryKey: [apiUrl("/business")],
@@ -42,14 +47,13 @@ export default function Layout({ children }: LayoutProps) {
     },
   });
 
-  const businesses = businessesData?.businesses || [];
+  const businesses: { id: number; businessName: string; city: string | null; state: string | null; gstin: string | null }[] = businessesData?.businesses || [];
 
-  const handleSwitchBusiness = async (id: number) => {
-    const selected = businesses.find((b: { id: number }) => b.id === id);
-    if (!selected) return;
-    setBusiness(selected);
+  const handleSwitchBusiness = (b: typeof businesses[number]) => {
+    setBusiness({ ...b, businessType: "retail", preferredLanguage: "hinglish" });
+    qc.invalidateQueries();
+    setBizOpen(false);
     setSidebarOpen(false);
-    await refreshBusiness();
   };
 
   return (
@@ -62,43 +66,53 @@ export default function Layout({ children }: LayoutProps) {
         "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-200",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-accent shadow-sm flex-shrink-0">
             <span className="text-white font-bold text-sm">P</span>
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-sidebar-foreground truncate">ParchiFlow</p>
-            {business && <p className="text-xs text-sidebar-foreground/60 truncate">{business.businessName}</p>}
+            <p className="text-xs text-sidebar-foreground/60 truncate">{business?.businessName || "—"}</p>
           </div>
           <Button variant="ghost" size="icon" className="ml-auto lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="px-3 py-3 border-b border-sidebar-border space-y-2">
-          <div className="flex items-center justify-between text-xs text-sidebar-foreground/60 uppercase tracking-wide px-1">
-            <span>Business</span>
-            <ChevronDown className="h-3.5 w-3.5" />
-          </div>
-          <div className="rounded-lg bg-sidebar-accent/60 px-3 py-2">
-            <p className="text-sm font-medium truncate">{business?.businessName || "Current Business"}</p>
-            <p className="text-xs text-sidebar-foreground/60 truncate">{business?.city || "India"}</p>
-          </div>
-          {businesses.length > 0 && (
-            <div className="space-y-1 max-h-36 overflow-y-auto">
-              {businesses.map((b: { id: number; businessName: string; city: string | null; state: string | null }) => (
-                <button key={b.id} onClick={() => handleSwitchBusiness(b.id)} className={cn("w-full text-left px-3 py-2 rounded-md text-sm hover:bg-sidebar-accent", business?.id === b.id && "bg-sidebar-accent") }>
-                  <span className="block truncate">{b.businessName}</span>
-                  <span className="block text-xs text-sidebar-foreground/60 truncate">{b.city || b.state || "India"}</span>
+        {/* Business switcher */}
+        <div className="px-3 py-2 border-b border-sidebar-border flex-shrink-0">
+          <button
+            onClick={() => setBizOpen(v => !v)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-sidebar-accent text-left">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{business?.businessName || "Select Business"}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">{business?.city || "India"}</p>
+            </div>
+            <ChevronDown className={cn("h-3.5 w-3.5 text-sidebar-foreground/50 flex-shrink-0 transition-transform", bizOpen && "rotate-180")} />
+          </button>
+
+          {bizOpen && (
+            <div className="mt-1 rounded-lg border border-sidebar-border bg-sidebar overflow-hidden">
+              {businesses.map(b => (
+                <button key={b.id} onClick={() => handleSwitchBusiness(b)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-sidebar-accent text-left">
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sidebar-foreground">{b.businessName}</p>
+                    <p className="text-xs text-sidebar-foreground/60 truncate">{b.city || b.state || "India"}</p>
+                  </div>
+                  {business?.id === b.id && <Check className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
                 </button>
               ))}
+              <Link href="/settings" onClick={() => { setBizOpen(false); setSidebarOpen(false); }}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent border-t border-sidebar-border">
+                <Plus className="h-3.5 w-3.5" /> Add Business
+              </Link>
             </div>
           )}
-          <Button variant="outline" size="sm" className="w-full justify-start gap-2 bg-transparent text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent">
-            <Plus className="h-4 w-4" /> Add Business
-          </Button>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {NAV_ITEMS.map(item => {
             const isActive = item.href === "/" ? location === "/" : location.startsWith(item.href);
@@ -120,7 +134,8 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        <div className="border-t border-sidebar-border p-3">
+        {/* User footer */}
+        <div className="border-t border-sidebar-border p-3 flex-shrink-0">
           <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg">
             <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-xs font-bold text-sidebar-primary-foreground flex-shrink-0">
               {user?.mobile?.slice(-2)}
@@ -136,6 +151,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="lg:hidden flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
@@ -156,7 +172,6 @@ export default function Layout({ children }: LayoutProps) {
             </Button>
           </div>
         </header>
-
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
