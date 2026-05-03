@@ -46,7 +46,7 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 ### Parties
 - `GET/POST /api/parties` — list/create parties
 - `GET/PUT/DELETE /api/parties/:id` — get/update/delete party
-- `GET /api/parties/:id/ledger` — party ledger + summary
+- `GET /api/parties/:id/ledger` — enhanced: invoices + payments merged, running balance (Dr/Cr), follow-up history, outstandings, date filter support
 
 ### Items (Item Master)
 - `GET /api/items` — list items (with lowStockCount)
@@ -87,9 +87,12 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `POST /api/reconciliation/:id/{confirm,merge,assign-party,mark-dispute,ignore,keep-separate}` — actions
 
 ### Follow-ups / Collection CRM
-- `GET/POST /api/follow-ups` — follow-ups
-- `PUT /api/follow-ups/:id` — update
-- `POST /api/follow-ups/generate-reminder` — generate WhatsApp message
+- `GET/POST /api/follow-ups` — follow-ups (with party + outstanding join)
+- `GET /api/follow-ups/due` — returns `{overdue, dueToday, upcoming, noDate, total}` buckets
+- `GET /api/follow-ups/stats` — `{total, overdueCount, dueTodayCount, upcomingCount}` for sidebar badge
+- `PUT /api/follow-ups/:id` — update (status, reschedule, promise date/amount)
+- `POST /api/follow-ups/auto-schedule` — auto-create follow-ups for all overdue outstandings missing a recent follow-up
+- `POST /api/follow-ups/generate-reminder` — generate WhatsApp message (soft/firm/urgent × hinglish/hindi/english)
 - `POST /api/follow-ups/log-reminder` — log reminder sent
 
 ### Data Sources / Import
@@ -134,9 +137,10 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `/` — Dashboard (KPIs, 6-month bar chart, insights cards, low-stock alert, aging chart, top debtors, recent activity)
 - `/parchi` — Parchi Entry (text parser + manual form, localStorage draft saving)
 - `/parties` — Party list + add party dialog
-- `/parties/:id` — Party detail + ledger statement
+- `/parties/:id` — Party detail: Ledger tab (Dr/Cr running balance table, date filter), Invoices tab, Follow-ups tab (history + add new, promise tracking)
 - `/outstandings` — Outstandings list + aging chart
 - `/collections` — Collection CRM + WhatsApp reminder generator
+- `/follow-ups` — Follow-up management hub: Overdue / Today / Upcoming / All tabs, auto-schedule, add manual follow-up, reschedule, promise tracking, mark done
 - `/reconciliation` — Reconciliation queue with actions
 - `/import` — CSV import + mock connector sync
 - `/invoices` — GST Invoice builder (line items, CGST/SGST/IGST, print view, draft saving)

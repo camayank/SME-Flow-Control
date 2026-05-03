@@ -12,6 +12,7 @@ import PartiesPage from "@/pages/parties";
 import PartyDetailPage from "@/pages/party-detail";
 import OutstandingsPage from "@/pages/outstandings";
 import CollectionsPage from "@/pages/collections";
+import FollowUpsPage from "@/pages/follow-ups";
 import ReconciliationPage from "@/pages/reconciliation";
 import ImportPage from "@/pages/import";
 import ReportsPage from "@/pages/reports";
@@ -72,6 +73,7 @@ function AppContent() {
         <Route path="/parties/:id" component={PartyDetailPage} />
         <Route path="/outstandings" component={OutstandingsPage} />
         <Route path="/collections" component={CollectionsPage} />
+        <Route path="/follow-ups" component={FollowUpsPage} />
         <Route path="/reconciliation" component={ReconciliationPage} />
         <Route path="/import" component={ImportPage} />
         <Route path="/reports" component={ReportsPage} />

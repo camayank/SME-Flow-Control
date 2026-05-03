@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, Receipt, RefreshCw,
   MessageCircle, Database, BarChart3, LogOut,
   Menu, X, ChevronRight, Plus, Package, ReceiptText,
-  ShieldAlert, Settings, ChevronDown, Check,
+  ShieldAlert, Settings, ChevronDown, Check, Bell,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/parties", icon: Users, label: "Parties" },
   { href: "/outstandings", icon: Receipt, label: "Outstandings" },
   { href: "/collections", icon: MessageCircle, label: "Collections" },
+  { href: "/follow-ups", icon: Bell, label: "Follow-ups", badge: true },
   { href: "/reconciliation", icon: RefreshCw, label: "Reconciliation" },
   { href: "/import", icon: Database, label: "Import / Sources" },
   { href: "/reports", icon: BarChart3, label: "Reports" },
@@ -46,6 +47,19 @@ export default function Layout({ children }: LayoutProps) {
       return res.json();
     },
   });
+
+  const { data: followUpStats } = useQuery<{ total: number; overdueCount: number; dueTodayCount: number; upcomingCount: number }>({
+    queryKey: [apiUrl("/follow-ups/stats")],
+    enabled: !!token,
+    refetchInterval: 60000,
+    queryFn: async () => {
+      const r = await fetch(apiUrl("/follow-ups/stats"), { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) return { total: 0, overdueCount: 0, dueTodayCount: 0, upcomingCount: 0 };
+      return r.json();
+    },
+  });
+
+  const urgentCount = (followUpStats?.overdueCount || 0) + (followUpStats?.dueTodayCount || 0);
 
   const businesses: { id: number; businessName: string; city: string | null; state: string | null; gstin: string | null }[] = businessesData?.businesses || [];
 
@@ -127,8 +141,15 @@ export default function Layout({ children }: LayoutProps) {
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}>
                 <item.icon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
-                {isActive && <ChevronRight className="h-3 w-3 ml-auto flex-shrink-0 opacity-50" />}
+                <span className="truncate flex-1">{item.label}</span>
+                {"badge" in item && item.badge && urgentCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 flex-shrink-0 font-bold">
+                    {urgentCount}
+                  </span>
+                )}
+                {isActive && !("badge" in item && item.badge && urgentCount > 0) && (
+                  <ChevronRight className="h-3 w-3 ml-auto flex-shrink-0 opacity-50" />
+                )}
               </Link>
             );
           })}
@@ -164,6 +185,18 @@ export default function Layout({ children }: LayoutProps) {
             <span className="font-semibold text-sm">ParchiFlow</span>
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/follow-ups">
+                <div className="relative">
+                  <Bell className="h-4.5 w-4.5" />
+                  {urgentCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                      {urgentCount > 9 ? "9+" : urgentCount}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </Button>
             <Button variant="ghost" size="icon" asChild>
               <Link href="/invoices"><ReceiptText className="h-4.5 w-4.5 text-primary" /></Link>
             </Button>
