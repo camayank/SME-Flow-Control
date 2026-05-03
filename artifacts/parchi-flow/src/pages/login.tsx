@@ -77,6 +77,9 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Demo login: Mobile <strong>9876543210</strong> · OTP <strong>123456</strong>
+            </div>
             {step === "mobile" ? (
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
@@ -93,6 +96,23 @@ export default function LoginPage() {
                       required
                       autoFocus
                     />
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setMobile("9876543210")}>
+                      Fill demo mobile
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setMobile("9876543210");
+                        setStep("otp");
+                        setOtp("123456");
+                      }}
+                    >
+                      Quick demo login
+                    </Button>
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading || mobile.length < 10}>
@@ -117,6 +137,9 @@ export default function LoginPage() {
                   />
                   <p className="text-xs text-muted-foreground mt-1.5">Demo ke liye: 123456</p>
                 </div>
+                <Button type="button" variant="outline" className="w-full" onClick={() => setOtp("123456")}>
+                  Fill demo OTP
+                </Button>
                 <Button type="submit" className="w-full" disabled={isLoading || otp.length < 6}>
                   {isLoading ? "Verify ho raha hai..." : "Login Karein"}
                 </Button>
