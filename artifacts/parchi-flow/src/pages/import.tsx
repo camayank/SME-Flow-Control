@@ -137,11 +137,11 @@ export default function ImportPage() {
   const handleSync = async (connectorType: string) => {
     setIsSyncing(connectorType);
     try {
-      const result = await apiPost<{ success: boolean; message: string; success: number }>(`/connectors/${connectorType}/sync`);
-      setSyncResult(prev => ({ ...prev, [connectorType]: { success: (result as unknown as { successCount: number }).successCount || 0, message: (result as unknown as { message: string }).message } }));
+      const result = await apiPost<{ successCount?: number; message: string }>(`/connectors/${connectorType}/sync`);
+      setSyncResult(prev => ({ ...prev, [connectorType]: { success: result.successCount || 0, message: result.message } }));
       queryClient.invalidateQueries({ queryKey: [apiUrl("/data-sources")] });
       queryClient.invalidateQueries({ queryKey: [apiUrl("/dashboard")] });
-      toast({ title: "Sync complete!", description: (result as unknown as { message: string }).message });
+      toast({ title: "Sync complete!", description: result.message });
     } catch (err: unknown) {
       toast({ title: "Sync failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" });
     } finally {
@@ -197,6 +197,10 @@ export default function ImportPage() {
                   </Select>
                   {isUploading && <span className="text-sm text-muted-foreground">Uploading...</span>}
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs text-muted-foreground">
+                  <div className="rounded-lg bg-muted/40 px-3 py-2">Best for bank statements, Excel ledgers, and party lists.</div>
+                  <div className="rounded-lg bg-muted/40 px-3 py-2">Upload ke baad column mapping aur preview milega.</div>
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -243,26 +247,30 @@ export default function ImportPage() {
                   <CardTitle className="text-sm">Preview (first 5 rows)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr>
-                          {uploadResult.headers.slice(0, 5).map(h => (
-                            <th key={h} className="text-left px-2 py-1 bg-muted font-medium">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {uploadResult.preview.map((row, i) => (
-                          <tr key={i} className="border-t">
+                  {uploadResult.preview.length ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr>
                             {uploadResult.headers.slice(0, 5).map(h => (
-                              <td key={h} className="px-2 py-1 text-muted-foreground">{row[h] || "—"}</td>
+                              <th key={h} className="text-left px-2 py-1 bg-muted font-medium">{h}</th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {uploadResult.preview.map((row, i) => (
+                            <tr key={i} className="border-t">
+                              {uploadResult.headers.slice(0, 5).map(h => (
+                                <td key={h} className="px-2 py-1 text-muted-foreground">{row[h] || "—"}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4 text-center">Preview unavailable for this file.</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -329,7 +337,7 @@ export default function ImportPage() {
           {!jobs.length ? (
             <Card>
               <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Koi import history nahi hai
+                Koi import history nahi hai — upload karke shuru karein
               </CardContent>
             </Card>
           ) : jobs.map(job => (
