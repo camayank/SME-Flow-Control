@@ -10,6 +10,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Database, Link, CheckCircle, AlertCircle, RefreshCw, FileText, Zap } from "lucide-react";
 
+type UploadMode = "invoice" | "kacha" | "pakka" | "ledger" | "bank_statement" | "party_list";
+
 interface DataSource {
   id: number;
   sourceType: string;
@@ -35,6 +37,9 @@ interface UploadResult {
   suggestedMapping: Record<string, string>;
   totalRows: number;
   preview: Record<string, string>[];
+  fileName?: string;
+  importType?: string;
+  invoiceMode?: string | null;
 }
 
 const CONNECTOR_CONFIG = [
@@ -65,7 +70,8 @@ const COLUMN_MAPPINGS = [
 export default function ImportPage() {
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [importType, setImportType] = useState("csv");
+  const [uploadMode, setUploadMode] = useState<UploadMode>("invoice");
+  const [invoiceMode, setInvoiceMode] = useState<"kacha" | "pakka">("kacha");
   const [isUploading, setIsUploading] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -99,12 +105,17 @@ export default function ImportPage() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Please upload a file under 10MB.", variant: "destructive" });
+      return;
+    }
 
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("importType", importType);
+      formData.append("importType", uploadMode === "invoice" ? "invoice" : uploadMode);
+      if (uploadMode === "invoice") formData.append("invoiceMode", invoiceMode);
       const result = await apiUpload<UploadResult>("/import/upload", formData);
       setUploadResult(result);
       setMapping(result.suggestedMapping);
@@ -152,13 +163,13 @@ export default function ImportPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold">Import / Data Sources</h1>
-        <p className="text-sm text-muted-foreground">CSV/Excel import aur accounting software sync</p>
+        <h1 className="text-xl font-bold">Invoice Upload / Import</h1>
+        <p className="text-sm text-muted-foreground">Kacha / Pakka invoice, CSV/Excel, aur accounting sync</p>
       </div>
 
       <Tabs defaultValue="upload">
         <TabsList>
-          <TabsTrigger value="upload">📂 CSV / Excel</TabsTrigger>
+          <TabsTrigger value="upload">📂 Invoice / CSV</TabsTrigger>
           <TabsTrigger value="connectors">🔌 Connectors</TabsTrigger>
           <TabsTrigger value="history">📋 History</TabsTrigger>
         </TabsList>
@@ -173,33 +184,50 @@ export default function ImportPage() {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="font-medium">CSV ya Excel file drag karein ya click karein</p>
-                  <p className="text-sm text-muted-foreground mt-1">Bank statement, Excel ledger, or any CSV file</p>
+                  <p className="font-medium">Kacha / Pakka invoice ya CSV/Excel file upload karein</p>
+                  <p className="text-sm text-muted-foreground mt-1">Invoices, bank statements, Excel ledgers, or party lists</p>
                   <div className="flex justify-center gap-2 mt-4">
-                    {["CSV", "XLSX", "XLS", "Bank Statement"].map(f => (
+                    {["KACHA", "PAKKA", "CSV", "XLSX", "XLS"].map(f => (
                       <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
                     ))}
                   </div>
                 </div>
                 <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
                 <div className="flex items-center gap-3 mt-4">
-                  <Label className="text-sm flex-shrink-0">Import Type:</Label>
-                  <Select value={importType} onValueChange={setImportType}>
+                  <Label className="text-sm flex-shrink-0">Upload Type:</Label>
+                  <Select value={uploadMode} onValueChange={v => setUploadMode(v as UploadMode)}>
                     <SelectTrigger className="w-48">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="csv">General CSV</SelectItem>
+                      <SelectItem value="invoice">Invoice</SelectItem>
+                      <SelectItem value="ledger">Ledger</SelectItem>
                       <SelectItem value="bank_statement">Bank Statement</SelectItem>
-                      <SelectItem value="excel_ledger">Excel Ledger</SelectItem>
                       <SelectItem value="party_list">Party List</SelectItem>
                     </SelectContent>
                   </Select>
+                  {uploadMode === "invoice" && (
+                    <Select value={invoiceMode} onValueChange={v => setInvoiceMode(v as "kacha" | "pakka")}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kacha">Kacha</SelectItem>
+                        <SelectItem value="pakka">Pakka</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   {isUploading && <span className="text-sm text-muted-foreground">Uploading...</span>}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs text-muted-foreground">
-                  <div className="rounded-lg bg-muted/40 px-3 py-2">Best for bank statements, Excel ledgers, and party lists.</div>
+                  <div className="rounded-lg bg-muted/40 px-3 py-2">Kacha = rough entry. Pakka = final invoice style upload.</div>
                   <div className="rounded-lg bg-muted/40 px-3 py-2">Upload ke baad column mapping aur preview milega.</div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("invoice")}>Invoice</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("ledger")}>Ledger</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("bank_statement")}>Bank Statement</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("party_list")}>Party List</Button>
                 </div>
               </CardContent>
             </Card>
@@ -209,7 +237,9 @@ export default function ImportPage() {
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-emerald-600" />
-                    <p className="text-sm font-medium text-emerald-800">{uploadResult.totalRows} rows detected</p>
+                    <p className="text-sm font-medium text-emerald-800">
+                      {uploadResult.fileName || "Uploaded file"} · {uploadResult.totalRows} rows detected
+                    </p>
                     <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={() => setUploadResult(null)}>
                       Change File
                     </Button>
@@ -274,9 +304,14 @@ export default function ImportPage() {
                 </CardContent>
               </Card>
 
-              <Button onClick={handleConfirmImport} disabled={isImporting} className="w-full" size="lg">
-                {isImporting ? "Import ho raha hai..." : `✅ Import Confirm Karein (${uploadResult.totalRows} rows)`}
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleConfirmImport} disabled={isImporting} className="w-full" size="lg">
+                  {isImporting ? "Import ho raha hai..." : `✅ Import Confirm Karein (${uploadResult.totalRows} rows)`}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  {uploadResult.invoiceMode ? `${uploadResult.invoiceMode.toUpperCase()} invoice mode selected` : "Invoice mode not set"}
+                </p>
+              </div>
             </div>
           )}
         </TabsContent>

@@ -106,10 +106,16 @@ router.post("/import/upload", authMiddleware, upload.single("file"), async (req:
 
   const fileContent = req.file.buffer.toString("utf-8");
   const importType = req.body.importType || "csv";
+  const invoiceMode = req.body.invoiceMode || null;
+  const originalName = req.file.originalname || "upload";
 
   // Parse CSV headers
   const lines = fileContent.split("\n").filter(l => l.trim());
   const headers = lines[0]?.split(",").map(h => h.trim().replace(/"/g, "")) || [];
+  if (!headers.length) {
+    res.status(400).json({ error: "File must contain headers in the first row" });
+    return;
+  }
 
   // Auto-detect column mapping
   const mapping: Record<string, string> = {};
@@ -132,13 +138,13 @@ router.post("/import/upload", authMiddleware, upload.single("file"), async (req:
   const job = await db.insert(importJobsTable).values({
     userId: req.userId!,
     businessId,
-    importType,
+    importType: invoiceMode ? `${importType}_${invoiceMode}` : importType,
     status: "mapping_required",
     totalRecords: lines.length - 1,
     successfulRecords: 0,
     failedRecords: 0,
     mappingJson: JSON.stringify(mapping),
-    fileData: fileContent.substring(0, 50000), // Store first 50KB
+    fileData: fileContent.substring(0, 50000),
   }).returning();
 
   res.status(201).json({
@@ -146,6 +152,9 @@ router.post("/import/upload", authMiddleware, upload.single("file"), async (req:
     headers,
     suggestedMapping: mapping,
     totalRows: lines.length - 1,
+    fileName: originalName,
+    importType: invoiceMode ? `${importType}_${invoiceMode}` : importType,
+    invoiceMode,
     preview: lines.slice(1, 6).map(line => {
       const cols = line.split(",").map(c => c.trim().replace(/"/g, ""));
       const row: Record<string, string> = {};
