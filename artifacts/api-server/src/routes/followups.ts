@@ -60,6 +60,18 @@ function formatFollowUp(fu: typeof followUpsTable.$inferSelect, partyName: strin
   };
 }
 
+function startOfDay(d: Date) {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+function endOfDay(d: Date) {
+  const out = new Date(d);
+  out.setHours(23, 59, 59, 999);
+  return out;
+}
+
 // GET /api/follow-ups
 router.get("/follow-ups", authMiddleware, async (req: AuthRequest, res) => {
   const businessId = await getBusinessId(req.userId!);
@@ -145,6 +157,91 @@ router.get("/follow-ups/stats", authMiddleware, async (req: AuthRequest, res) =>
   const upcomingCount = all.filter(r => r.followUp.nextFollowUpAt && new Date(r.followUp.nextFollowUpAt) > todayEnd && new Date(r.followUp.nextFollowUpAt) <= weekLater).length;
 
   res.json({ total: all.length, overdueCount, dueTodayCount, upcomingCount });
+});
+
+// GET /api/follow-ups/digest
+router.get("/follow-ups/digest", authMiddleware, async (req: AuthRequest, res) => {
+  const businessId = await getBusinessId(req.userId!);
+  if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+  const tomorrow = new Date(todayStart);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [followUpRows, outstandingRows, business] = await Promise.all([
+    db.select({
+      followUp: followUpsTable,
+      partyName: partiesTable.name,
+      partyMobile: partiesTable.mobile,
+      amountDue: outstandingsTable.amountDue,
+    })
+      .from(followUpsTable)
+      .leftJoin(partiesTable, eq(followUpsTable.partyId, partiesTable.id))
+      .leftJoin(outstandingsTable, eq(followUpsTable.outstandingId, outstandingsTable.id))
+      .where(and(
+        eq(followUpsTable.businessId, businessId),
+        ne(followUpsTable.status, "done"),
+        ne(followUpsTable.status, "resolved"),
+      )),
+    db.select({
+      outstanding: outstandingsTable,
+      partyName: partiesTable.name,
+      partyMobile: partiesTable.mobile,
+    })
+      .from(outstandingsTable)
+      .leftJoin(partiesTable, eq(outstandingsTable.partyId, partiesTable.id))
+      .where(and(
+        eq(outstandingsTable.businessId, businessId),
+        eq(outstandingsTable.status, "open"),
+      )),
+    db.select().from(businessesTable).where(eq(businessesTable.id, businessId)).limit(1),
+  ]);
+
+  const followUps = followUpRows.map(({ followUp, partyName, partyMobile, amountDue }) =>
+    formatFollowUp(followUp, partyName, partyMobile, amountDue ? parseFloat(amountDue) : null)
+  );
+  const overdueFollowUps = followUps
+    .filter(fu => fu.nextFollowUpAt && new Date(fu.nextFollowUpAt) < todayStart);
+
+  const dueTodayFollowUps = followUps
+    .filter(fu => fu.nextFollowUpAt && new Date(fu.nextFollowUpAt) >= todayStart && new Date(fu.nextFollowUpAt) <= todayEnd);
+
+  const overdueOutstandings = outstandingRows
+    .map(({ outstanding, partyName, partyMobile }) => ({
+      id: outstanding.id,
+      partyId: outstanding.partyId,
+      partyName,
+      partyMobile,
+      amountDue: parseFloat(outstanding.amountDue),
+      dueDate: outstanding.dueDate,
+      agingDays: outstanding.dueDate ? Math.floor((todayStart.getTime() - new Date(outstanding.dueDate).getTime()) / 86400000) : 0,
+      invoiceNumber: outstanding.invoiceNumber,
+    }))
+    .filter(o => o.agingDays > 0);
+
+  const whatsappMessage = [
+    `Good morning${business[0]?.businessName ? ` from ${business[0].businessName}` : ""}!`,
+    overdueFollowUps.length ? `Overdue follow-ups: ${overdueFollowUps.length}` : null,
+    dueTodayFollowUps.length ? `Due today: ${dueTodayFollowUps.length}` : null,
+    overdueOutstandings.length ? `Overdue parties: ${overdueOutstandings.length}` : null,
+    overdueOutstandings.slice(0, 5).map(o => `• ${o.partyName || "Party"} — ₹${o.amountDue.toLocaleString("en-IN")} (${o.agingDays}d overdue)`).join("\n"),
+  ].filter(Boolean).join("\n");
+
+  res.json({
+    date: todayStart,
+    overdueFollowUps,
+    dueTodayFollowUps,
+    overdueOutstandings,
+    summary: {
+      overdueFollowUps: overdueFollowUps.length,
+      dueTodayFollowUps: dueTodayFollowUps.length,
+      overdueOutstandings: overdueOutstandings.length,
+      totalActionItems: overdueFollowUps.length + dueTodayFollowUps.length + overdueOutstandings.length,
+    },
+    whatsappMessage,
+  });
 });
 
 // POST /api/follow-ups
