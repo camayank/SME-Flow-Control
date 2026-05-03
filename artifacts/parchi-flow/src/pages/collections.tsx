@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { apiPost, apiUrl, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +53,7 @@ const PRIORITY_BADGE: Record<string, string> = {
 };
 
 export default function CollectionsPage() {
+  const [, navigate] = useLocation();
   const [selectedOutstanding, setSelectedOutstanding] = useState<Outstanding | null>(null);
   const [reminderDialog, setReminderDialog] = useState(false);
   const [templateType, setTemplateType] = useState("soft");
@@ -228,7 +229,7 @@ export default function CollectionsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       className="font-medium text-sm hover:text-primary hover:underline text-left"
-                      onClick={() => { window.location.href = `/parchi-flow/parties/${o.partyId}`; }}
+                      onClick={() => navigate(`/parties/${o.partyId}`)}
                     >
                       {o.partyName || "Unknown"}
                     </button>

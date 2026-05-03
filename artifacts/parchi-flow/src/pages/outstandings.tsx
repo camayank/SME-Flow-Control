@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { apiUrl, apiPost, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,7 @@ const AGING_COLORS: Record<string, string> = {
 };
 
 export default function OutstandingsPage() {
+  const [, navigate] = useLocation();
   const [filter, setFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -120,7 +121,7 @@ export default function OutstandingsPage() {
       <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/30 transition-colors">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <button className="font-medium text-sm truncate hover:text-primary hover:underline text-left" onClick={() => window.location.assign(`${window.location.pathname.replace(/\/outstandings$/, "")}/parties/${o.partyId}`)}>
+            <button className="font-medium text-sm truncate hover:text-primary hover:underline text-left" onClick={() => navigate(`/parties/${o.partyId}`)}>
               {o.partyName || "Unknown Party"}
             </button>
             <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${priority.bg} ${priority.color}`}>
