@@ -172,7 +172,7 @@ export default function ImportPage() {
         <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium">Upgrade-ready import flow</p>
-            <p className="text-xs text-muted-foreground">Aage chalkar OCR, PDF parsing, GST-aware extraction, aur auto-mapping add ki ja sakti hai.</p>
+            <p className="text-xs text-muted-foreground">Aage chalkar OCR, PDF parsing, GST-aware extraction, duplicate checks, aur auto-mapping add ki ja sakti hai.</p>
           </div>
           <Button asChild variant="outline" size="sm">
             <RouterLink href="/dashboard">Back to Dashboard</RouterLink>

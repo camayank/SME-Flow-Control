@@ -168,7 +168,7 @@ export default function PartyDetailPage() {
         <CardContent className="py-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium flex items-center gap-2"><ReceiptText className="h-4 w-4" />Invoice-style statement</p>
-            <p className="text-xs text-muted-foreground">Party ledger, due dates, and reminders in one screen.</p>
+            <p className="text-xs text-muted-foreground">Party ledger, due dates, reminders, and print-ready statement in one screen.</p>
           </div>
           <Badge variant="secondary">{entries.length} rows</Badge>
         </CardContent>

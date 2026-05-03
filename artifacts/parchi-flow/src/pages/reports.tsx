@@ -107,6 +107,8 @@ export default function ReportsPage() {
 
   const pieData = agingChartData.map(d => ({ name: d.name, value: d.amount, fill: d.color }));
 
+  const hasOps = !!(followUps?.total || sourceSync?.sources?.length);
+
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-4xl mx-auto">
       <div>
@@ -114,7 +116,7 @@ export default function ReportsPage() {
           <BarChart3 className="h-5 w-5" />
           Reports
         </h1>
-        <p className="text-sm text-muted-foreground">Business analytics aur financial reports</p>
+        <p className="text-sm text-muted-foreground">Business analytics, collection ops, aur statement views</p>
       </div>
 
       {/* KPI row */}
@@ -265,6 +267,14 @@ export default function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="ops" className="mt-4 space-y-4">
+          {!hasOps && (
+            <Card className="border-dashed border-primary/25 bg-primary/5">
+              <CardContent className="py-4">
+                <p className="text-sm font-medium">Ops layer ready hai</p>
+                <p className="text-xs text-muted-foreground mt-1">Follow-ups ya connected sources aate hi yahan live tracking dikhega.</p>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Collections Follow-up Status</CardTitle>
