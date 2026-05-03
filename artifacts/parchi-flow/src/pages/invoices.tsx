@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, ReceiptText, Printer, Search, X, CheckCircle,
-  MessageCircle, ArrowRightCircle, Share2,
+  MessageCircle, ArrowRightCircle, Share2, IndianRupee,
 } from "lucide-react";
 
 interface Item {
@@ -82,9 +82,9 @@ function getEmptyForm(type: string) {
 }
 
 function whatsappText(inv: Invoice, businessName: string) {
-  const lines = inv.items.map(it => `  • ${it.name} × ${it.qty} = ₹${it.lineTotal.toFixed(0)}`).join("\n");
+  const lines = inv.items.map(it => `• ${it.name} × ${it.qty} = ₹${it.lineTotal.toFixed(0)}`).join("\n");
   return encodeURIComponent(
-    `*${businessName}*\nInvoice: ${inv.invoiceNumber}\nDate: ${new Date(inv.invoiceDate).toLocaleDateString("en-IN")}\n\n${lines}\n\n*Total: ₹${inv.total.toFixed(0)}*\n${inv.balanceDue > 0 ? `*Balance Due: ₹${inv.balanceDue.toFixed(0)}*` : "✅ Paid"}`
+    `*${businessName}*\n${inv.invoiceType === "quotation" ? "Quotation" : "Invoice"}: ${inv.invoiceNumber}\nDate: ${new Date(inv.invoiceDate).toLocaleDateString("en-IN")}\n\n${lines}\n\n*Total: ₹${inv.total.toFixed(0)}*\n${inv.balanceDue > 0 ? `*Balance Due: ₹${inv.balanceDue.toFixed(0)}*` : "✅ Paid"}`
   );
 }
 
@@ -99,6 +99,11 @@ export default function InvoicesPage() {
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
   const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
+  const [paymentNote, setPaymentNote] = useState("");
   const [partySearch, setPartySearch] = useState("");
 
   const [form, setForm] = useState(() => {
@@ -146,7 +151,7 @@ export default function InvoicesPage() {
   const createMutation = useMutation({
     mutationFn: (payload: typeof form) => apiPost<Invoice>("/invoices", {
       ...payload,
-      items: payload.items.filter(i => i.name && i.qty > 0),
+      items: payload.items.filter((i: LineItem) => i.name && i.qty > 0),
     }),
     onSuccess: (inv) => {
       queryClient.invalidateQueries({ queryKey: [apiUrl(`/invoices?type=${tab}`)] });
@@ -187,6 +192,36 @@ export default function InvoicesPage() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const recordPaymentMutation = useMutation({
+    mutationFn: async () => {
+      if (!paymentInvoice) throw new Error("Select invoice");
+      const res = await fetch(apiUrl(`/invoices/${paymentInvoice.id}/record-payment`), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount: Number(paymentAmount),
+          paymentDate,
+          note: paymentNote,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to record payment");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [apiUrl(`/invoices?type=${tab}`)] });
+      queryClient.invalidateQueries({ queryKey: [apiUrl("/outstandings")] });
+      setPaymentOpen(false);
+      setPaymentInvoice(null);
+      setPaymentAmount("");
+      setPaymentNote("");
+      toast({ title: "Payment recorded!" });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const filteredInvoices = (invoices || []).filter(inv =>
     !search || inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
     (inv.partyName && inv.partyName.toLowerCase().includes(search.toLowerCase()))
@@ -218,14 +253,14 @@ export default function InvoicesPage() {
     line.rate = tab === "purchase" ? item.purchasePrice : item.salePrice;
     line.gstRate = item.gstRate;
     const c = calcLine(1, line.rate, line.gstRate, form.isInterState);
-    const lines = [...form.items.filter(i => i.name), { ...line, ...c }];
+    const lines = [...form.items.filter((i: LineItem) => i.name), { ...line, ...c }];
     updateForm({ items: lines });
   };
 
-  const subtotal = form.items.reduce((s, i) => s + i.amount, 0);
-  const cgstTotal = form.items.reduce((s, i) => s + i.cgst, 0);
-  const sgstTotal = form.items.reduce((s, i) => s + i.sgst, 0);
-  const igstTotal = form.items.reduce((s, i) => s + i.igst, 0);
+  const subtotal = form.items.reduce((s: number, i: LineItem) => s + i.amount, 0);
+  const cgstTotal = form.items.reduce((s: number, i: LineItem) => s + i.cgst, 0);
+  const sgstTotal = form.items.reduce((s: number, i: LineItem) => s + i.sgst, 0);
+  const igstTotal = form.items.reduce((s: number, i: LineItem) => s + i.igst, 0);
   const grandTotal = subtotal + cgstTotal + sgstTotal + igstTotal;
 
   const filteredParties = (parties || []).filter(p =>
@@ -294,7 +329,6 @@ export default function InvoicesPage() {
                         <p className="text-sm font-bold">{formatCurrency(inv.total)}</p>
                         {inv.balanceDue > 0 && <p className="text-xs text-red-500">Due: {formatCurrency(inv.balanceDue)}</p>}
                       </div>
-                      {/* Quotation: convert to invoice */}
                       {inv.invoiceType === "quotation" && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" title="Convert to Invoice"
                           disabled={convertMutation.isPending}
@@ -302,12 +336,10 @@ export default function InvoicesPage() {
                           <ArrowRightCircle className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {/* Print */}
                       <Button variant="ghost" size="icon" className="h-8 w-8" title="Print / Preview"
                         onClick={() => setPrintInvoice(inv)}>
                         <Printer className="h-3.5 w-3.5" />
                       </Button>
-                      {/* WhatsApp share */}
                       {inv.partyId && (
                         <a
                           href={`https://wa.me/?text=${whatsappText(inv, business?.businessName || "")}`}
@@ -317,7 +349,16 @@ export default function InvoicesPage() {
                           <MessageCircle className="h-3.5 w-3.5" />
                         </a>
                       )}
-                      {/* Mark paid */}
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-600" title="Record Payment"
+                        onClick={() => {
+                          setPaymentInvoice(inv);
+                          setPaymentAmount(String(inv.balanceDue > 0 ? inv.balanceDue : inv.total));
+                          setPaymentDate(new Date().toISOString().split("T")[0]);
+                          setPaymentNote("");
+                          setPaymentOpen(true);
+                        }}>
+                        <IndianRupee className="h-3.5 w-3.5" />
+                      </Button>
                       {inv.status === "unpaid" && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" title="Mark Paid"
                           onClick={() => markPaidMutation.mutate({ id: inv.id })}>
@@ -333,7 +374,35 @@ export default function InvoicesPage() {
         </TabsContent>
       </Tabs>
 
-      {/* New Invoice / Quotation Dialog */}
+      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Record Payment</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Invoice</Label>
+              <Input className="mt-1" value={paymentInvoice?.invoiceNumber || ""} disabled />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Amount</Label>
+                <Input className="mt-1" type="number" min="1" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input className="mt-1" type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label>Note</Label>
+              <Textarea className="mt-1" rows={3} value={paymentNote} onChange={e => setPaymentNote(e.target.value)} placeholder="Cash / UPI / Bank transfer" />
+            </div>
+            <Button className="w-full" disabled={recordPaymentMutation.isPending || !paymentAmount} onClick={() => recordPaymentMutation.mutate()}>
+              {recordPaymentMutation.isPending ? "Saving..." : "Save Payment"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
@@ -343,7 +412,6 @@ export default function InvoicesPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Party */}
             <div>
               <Label>Party Name</Label>
               <Input className="mt-1" placeholder="Party ka naam..."
@@ -384,7 +452,6 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            {/* Items */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label>Items</Label>
@@ -404,7 +471,7 @@ export default function InvoicesPage() {
                   <div className="col-span-2">Rate</div><div className="col-span-1 text-center">GST%</div>
                   <div className="col-span-2 text-right">Total</div><div className="col-span-2" />
                 </div>
-                {form.items.map((line, idx) => (
+                {form.items.map((line: LineItem, idx: number) => (
                   <div key={idx} className="grid grid-cols-12 gap-1 px-3 py-1.5 border-t items-center">
                     <div className="col-span-4">
                       <Input className="h-7 text-xs" placeholder="Item name" value={line.name}
@@ -426,11 +493,10 @@ export default function InvoicesPage() {
                     </div>
                     <div className="col-span-2 text-right text-xs font-medium">{formatCurrency(line.lineTotal)}</div>
                     <div className="col-span-2 flex justify-end">
-                      <Button variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={() => {
-                          const lines = form.items.filter((_, i) => i !== idx);
-                          updateForm({ items: lines.length ? lines : [emptyLine()] });
-                        }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        const lines = form.items.filter((_: LineItem, i: number) => i !== idx);
+                        updateForm({ items: lines.length ? lines : [emptyLine()] });
+                      }}>
                         <X className="h-3.5 w-3.5 text-destructive" />
                       </Button>
                     </div>
@@ -444,7 +510,6 @@ export default function InvoicesPage() {
               </Button>
             </div>
 
-            {/* Totals */}
             <div className="rounded-lg bg-muted/50 p-3 space-y-1.5 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Subtotal (taxable)</span><span>{formatCurrency(subtotal)}</span></div>
               {!form.isInterState ? (
@@ -472,7 +537,7 @@ export default function InvoicesPage() {
                 Save Draft
               </Button>
               <Button className="flex-1"
-                disabled={createMutation.isPending || !form.items.some(i => i.name)}
+                disabled={createMutation.isPending || !form.items.some((i: LineItem) => i.name)}
                 onClick={() => createMutation.mutate(form)}>
                 {createMutation.isPending ? "Creating..." : tab === "quotation" ? "Create Quotation" : "Create Invoice"}
               </Button>
@@ -481,7 +546,6 @@ export default function InvoicesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Print / Share Dialog */}
       <Dialog open={!!printInvoice} onOpenChange={() => setPrintInvoice(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -507,7 +571,6 @@ export default function InvoicesPage() {
           </DialogHeader>
           {printInvoice && (
             <div ref={printRef} className="border rounded-lg p-6 space-y-4 print:shadow-none print:border-none" id="invoice-print">
-              {/* Header */}
               <div className="flex items-start justify-between border-b pb-4">
                 <div>
                   <p className="text-lg font-bold">{business?.businessName}</p>
@@ -531,7 +594,6 @@ export default function InvoicesPage() {
                 </div>
               </div>
 
-              {/* Bill to */}
               {printInvoice.partyName && (
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -550,7 +612,6 @@ export default function InvoicesPage() {
                 </div>
               )}
 
-              {/* Items table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -585,7 +646,6 @@ export default function InvoicesPage() {
                 </table>
               </div>
 
-              {/* Totals */}
               <div className="flex justify-end">
                 <div className="w-60 space-y-1.5 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Taxable Amount</span><span>{formatCurrency(printInvoice.subtotal)}</span></div>
@@ -608,16 +668,29 @@ export default function InvoicesPage() {
                 </div>
               </div>
 
-              {/* Notes + Footer */}
-              {printInvoice.notes && (
+                  {printInvoice.notes && (
                 <div className="border-t pt-3 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground mb-1">Notes / Terms</p>
                   <p>{printInvoice.notes}</p>
                 </div>
               )}
-              {business?.upiId && (
+              {business && "upiId" in business && typeof business.upiId === "string" && business.upiId && (
                 <div className="border-t pt-3 text-xs">
                   <p className="text-muted-foreground">UPI Payment: <span className="font-mono font-medium text-foreground">{business.upiId}</span></p>
+                </div>
+              )}
+              {printInvoice.status !== "paid" && printInvoice.balanceDue > 0 && (
+                <div className="border-t pt-3 flex gap-2">
+                  <Button className="flex-1" onClick={() => {
+                    setPrintInvoice(null);
+                    setPaymentInvoice(printInvoice);
+                    setPaymentAmount(String(printInvoice.balanceDue));
+                    setPaymentDate(new Date().toISOString().split("T")[0]);
+                    setPaymentNote("");
+                    setPaymentOpen(true);
+                  }}>
+                    Record Payment
+                  </Button>
                 </div>
               )}
             </div>

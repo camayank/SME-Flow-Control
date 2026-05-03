@@ -76,8 +76,9 @@ router.get("/invoices", authMiddleware, async (req: AuthRequest, res) => {
 router.get("/invoices/:id", authMiddleware, async (req: AuthRequest, res) => {
   const businessId = await getBusinessId(req.userId!);
   if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const inv = await db.select().from(invoicesTable).where(
-    and(eq(invoicesTable.id, parseInt(req.params.id)), eq(invoicesTable.businessId, businessId))
+    and(eq(invoicesTable.id, id), eq(invoicesTable.businessId, businessId))
   ).limit(1);
   if (!inv.length) { res.status(404).json({ error: "Invoice not found" }); return; }
   const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, inv[0].id));
@@ -170,12 +171,12 @@ router.post("/invoices", authMiddleware, async (req: AuthRequest, res) => {
   res.status(201).json(fmtInvoice(inv[0], items2));
 });
 
-// Convert quotation → sales invoice
 router.post("/invoices/:id/convert", authMiddleware, async (req: AuthRequest, res) => {
   const businessId = await getBusinessId(req.userId!);
   if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const inv = await db.select().from(invoicesTable).where(
-    and(eq(invoicesTable.id, parseInt(req.params.id)), eq(invoicesTable.businessId, businessId))
+    and(eq(invoicesTable.id, id), eq(invoicesTable.businessId, businessId))
   ).limit(1);
   if (!inv.length) { res.status(404).json({ error: "Invoice not found" }); return; }
   if (inv[0].invoiceType !== "quotation") { res.status(400).json({ error: "Only quotations can be converted" }); return; }
@@ -213,12 +214,67 @@ router.post("/invoices/:id/convert", authMiddleware, async (req: AuthRequest, re
   res.json(fmtInvoice(updated[0], items2));
 });
 
+router.put("/invoices/:id/record-payment", authMiddleware, async (req: AuthRequest, res) => {
+  const businessId = await getBusinessId(req.userId!);
+  if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const inv = await db.select().from(invoicesTable).where(
+    and(eq(invoicesTable.id, id), eq(invoicesTable.businessId, businessId))
+  ).limit(1);
+  if (!inv.length) { res.status(404).json({ error: "Invoice not found" }); return; }
+  const amount = parseFloat(String(req.body.amount || 0));
+  if (!amount || amount <= 0) { res.status(400).json({ error: "Payment amount is required" }); return; }
+  const note = typeof req.body.note === "string" ? req.body.note : null;
+  const paymentDate = req.body.paymentDate ? new Date(req.body.paymentDate) : new Date();
+  const total = parseFloat(inv[0].total);
+  const currentPaid = parseFloat(inv[0].amountPaid || "0");
+  const newPaid = Math.min(total, currentPaid + amount);
+  const newBalance = Math.max(0, total - newPaid);
+  const newStatus = newBalance <= 0 ? "paid" : newPaid > 0 ? "partially_paid" : "unpaid";
+  await db.update(invoicesTable).set({
+    amountPaid: newPaid.toString(),
+    balanceDue: newBalance.toString(),
+    status: newStatus,
+    updatedAt: new Date(),
+  }).where(eq(invoicesTable.id, inv[0].id));
+  await db.insert(moneyEventsTable).values({
+    userId: req.userId!,
+    businessId,
+    partyId: inv[0].partyId,
+    eventType: "payment_received",
+    amount: amount.toString(),
+    paymentMethod: "cash",
+    eventDate: paymentDate,
+    referenceNumber: inv[0].invoiceNumber,
+    note: note || `Payment received for ${inv[0].invoiceNumber}`,
+    sourceType: "invoice_payment",
+  } as typeof moneyEventsTable.$inferInsert).catch(() => {});
+  await db.insert(auditLogsTable).values({
+    businessId,
+    userId: req.userId!,
+    action: "payment",
+    entityType: "invoice",
+    entityId: String(inv[0].id),
+    description: `Payment of ₹${amount.toFixed(0)} recorded for ${inv[0].invoiceNumber}`,
+  }).catch(() => {});
+  if (inv[0].partyId) {
+    await db.update(outstandingsTable).set({
+      amountCollected: newPaid.toString(),
+      amountDue: newBalance.toString(),
+      status: newBalance <= 0 ? "closed" : "open",
+      updatedAt: new Date(),
+    }).where(and(eq(outstandingsTable.businessId, businessId), eq(outstandingsTable.invoiceNumber, inv[0].invoiceNumber)));
+  }
+  res.json({ success: true, amountPaid: newPaid, balanceDue: newBalance, status: newStatus });
+});
+
 router.put("/invoices/:id/mark-paid", authMiddleware, async (req: AuthRequest, res) => {
   const businessId = await getBusinessId(req.userId!);
   if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { amountPaid } = req.body;
   const inv = await db.select().from(invoicesTable).where(
-    and(eq(invoicesTable.id, parseInt(req.params.id)), eq(invoicesTable.businessId, businessId))
+    and(eq(invoicesTable.id, id), eq(invoicesTable.businessId, businessId))
   ).limit(1);
   if (!inv.length) { res.status(404).json({ error: "Invoice not found" }); return; }
   const paid = parseFloat(amountPaid || String(inv[0].total));
@@ -227,15 +283,16 @@ router.put("/invoices/:id/mark-paid", authMiddleware, async (req: AuthRequest, r
   const newStatus = newBalance <= 0 ? "paid" : "partially_paid";
   await db.update(invoicesTable).set({
     amountPaid: paid.toString(), balanceDue: newBalance.toString(), status: newStatus, updatedAt: new Date(),
-  }).where(eq(invoicesTable.id, parseInt(req.params.id)));
+  }).where(eq(invoicesTable.id, id));
   res.json({ success: true, status: newStatus, balanceDue: newBalance });
 });
 
 router.delete("/invoices/:id", authMiddleware, async (req: AuthRequest, res) => {
   const businessId = await getBusinessId(req.userId!);
   if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   await db.update(invoicesTable).set({ status: "cancelled", updatedAt: new Date() })
-    .where(and(eq(invoicesTable.id, parseInt(req.params.id)), eq(invoicesTable.businessId, businessId)));
+    .where(and(eq(invoicesTable.id, id), eq(invoicesTable.businessId, businessId)));
   res.json({ success: true });
 });
 
