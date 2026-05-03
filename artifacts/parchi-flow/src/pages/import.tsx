@@ -9,7 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Link as RouterLink } from "wouter";
-import { Upload, Database, Link, CheckCircle, AlertCircle, RefreshCw, FileText, Zap } from "lucide-react";
+import {
+  Upload, Database, CheckCircle, AlertCircle, RefreshCw,
+  FileText, Zap, ArrowRight, Wifi, WifiOff, Clock,
+} from "lucide-react";
 
 type UploadMode = "invoice" | "kacha" | "pakka" | "ledger" | "bank_statement" | "party_list";
 
@@ -44,16 +47,46 @@ interface UploadResult {
 }
 
 const CONNECTOR_CONFIG = [
-  { type: "tally", name: "Tally Prime", icon: "T", color: "bg-blue-600", description: "TallyPrime 2.0+ se sync karein" },
-  { type: "busy", name: "BUSY Accounting", icon: "B", color: "bg-purple-600", description: "BUSY 21+ se sync karein" },
-  { type: "marg", name: "Marg ERP 9+", icon: "M", color: "bg-orange-600", description: "Marg ERP 9+ se sync karein" },
+  {
+    type: "tally",
+    name: "Tally Prime",
+    shortName: "T",
+    color: "bg-blue-600",
+    border: "border-blue-200",
+    bg: "bg-blue-50",
+    description: "TallyPrime 2.0+ se auto-sync. Party ledger, vouchers, aur balances real-time.",
+    badge: "Most Popular",
+    badgeColor: "bg-blue-100 text-blue-700",
+  },
+  {
+    type: "busy",
+    name: "BUSY Accounting",
+    shortName: "B",
+    color: "bg-purple-600",
+    border: "border-purple-200",
+    bg: "bg-purple-50",
+    description: "BUSY 21+ se sync. Inventory, GST, aur party data ek click mein.",
+    badge: "GST Ready",
+    badgeColor: "bg-purple-100 text-purple-700",
+  },
+  {
+    type: "marg",
+    name: "Marg ERP 9+",
+    shortName: "M",
+    color: "bg-orange-600",
+    border: "border-orange-200",
+    bg: "bg-orange-50",
+    description: "Marg ERP 9+ se sync. Pharma, FMCG, aur distribution ke liye ideal.",
+    badge: "Pharma Friendly",
+    badgeColor: "bg-orange-100 text-orange-700",
+  },
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  connected: "bg-emerald-100 text-emerald-700",
-  not_connected: "bg-slate-100 text-slate-600",
-  error: "bg-red-100 text-red-700",
-  syncing: "bg-blue-100 text-blue-700",
+const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
+  connected: { label: "Connected", icon: Wifi, cls: "text-emerald-600" },
+  not_connected: { label: "Not Connected", icon: WifiOff, cls: "text-slate-400" },
+  error: { label: "Error", icon: AlertCircle, cls: "text-red-500" },
+  syncing: { label: "Syncing...", icon: RefreshCw, cls: "text-blue-500" },
 };
 
 const COLUMN_MAPPINGS = [
@@ -110,7 +143,6 @@ export default function ImportPage() {
       toast({ title: "File too large", description: "Please upload a file under 10MB.", variant: "destructive" });
       return;
     }
-
     setIsUploading(true);
     try {
       const formData = new FormData();
@@ -161,254 +193,234 @@ export default function ImportPage() {
     }
   };
 
+  const getSourceStatus = (connectorType: string) => {
+    return sources.find(s => s.sourceType === connectorType);
+  };
+
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-xl font-bold">Invoice Upload / Import</h1>
-        <p className="text-sm text-muted-foreground">Kacha / Pakka invoice, CSV/Excel, aur accounting sync</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2"><Database className="h-5 w-5" />Data Sources & Import</h1>
+          <p className="text-sm text-muted-foreground">Tally, Marg, BUSY sync — ya CSV/Excel se manual import</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <RouterLink href="/">← Dashboard</RouterLink>
+        </Button>
       </div>
 
-      <Card className="border-dashed border-primary/25 bg-primary/5">
-        <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium">Upgrade-ready import flow</p>
-            <p className="text-xs text-muted-foreground">Aage chalkar OCR, PDF parsing, GST-aware extraction, duplicate checks, aur auto-mapping add ki ja sakti hai.</p>
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/2">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-start gap-3">
+            <Zap className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">Tally/Marg/BUSY already use karte hain?</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                ParchiFlow aapke existing accounting system ka data sync karta hai aur uski jaroorat se zyada kuch bhi replace nahi karta.
+                Real-time syncing se aapko collections, outstanding aur cash flow ka clear overview milega — bina complex BI ke.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                {["Tally Prime", "BUSY 21+", "Marg ERP 9+"].map(s => (
+                  <span key={s} className="text-xs bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-medium">{s}</span>
+                ))}
+                <span className="text-xs bg-muted text-muted-foreground px-2.5 py-0.5 rounded-full">CSV / Excel bhi</span>
+              </div>
+            </div>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <RouterLink href="/dashboard">Back to Dashboard</RouterLink>
-          </Button>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="upload">
+      <Tabs defaultValue="connectors">
         <TabsList>
-          <TabsTrigger value="upload">📂 Invoice / CSV</TabsTrigger>
-          <TabsTrigger value="connectors">🔌 Connectors</TabsTrigger>
-          <TabsTrigger value="history">📋 History</TabsTrigger>
+          <TabsTrigger value="connectors">🔌 Sync Connectors</TabsTrigger>
+          <TabsTrigger value="upload">📂 CSV / Excel</TabsTrigger>
+          <TabsTrigger value="history">📋 Import History</TabsTrigger>
         </TabsList>
 
-        {/* Upload tab */}
-        <TabsContent value="upload" className="mt-4 space-y-4">
-          {!uploadResult ? (
-            <Card>
-              <CardContent className="py-8">
-                <div
-                  className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="font-medium">Kacha / Pakka invoice ya CSV/Excel file upload karein</p>
-                  <p className="text-sm text-muted-foreground mt-1">Invoices, bank statements, Excel ledgers, or party lists</p>
-                  <div className="flex justify-center gap-2 mt-4">
-                    {["KACHA", "PAKKA", "CSV", "XLSX", "XLS"].map(f => (
-                      <Badge key={f} variant="secondary" className="text-xs">{f}</Badge>
-                    ))}
-                  </div>
-                </div>
-                <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFileUpload} />
-                <div className="flex items-center gap-3 mt-4">
-                  <Label className="text-sm flex-shrink-0">Upload Type:</Label>
-                  <Select value={uploadMode} onValueChange={v => setUploadMode(v as UploadMode)}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="invoice">Invoice</SelectItem>
-                      <SelectItem value="ledger">Ledger</SelectItem>
-                      <SelectItem value="bank_statement">Bank Statement</SelectItem>
-                      <SelectItem value="party_list">Party List</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {uploadMode === "invoice" && (
-                    <Select value={invoiceMode} onValueChange={v => setInvoiceMode(v as "kacha" | "pakka")}>
-                      <SelectTrigger className="w-36">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="kacha">Kacha</SelectItem>
-                        <SelectItem value="pakka">Pakka</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {isUploading && <span className="text-sm text-muted-foreground">Uploading...</span>}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs text-muted-foreground">
-                  <div className="rounded-lg bg-muted/40 px-3 py-2">Kacha = rough entry. Pakka = final invoice style upload.</div>
-                  <div className="rounded-lg bg-muted/40 px-3 py-2">Upload ke baad column mapping aur preview milega.</div>
-                </div>
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 mt-3 text-xs text-amber-900">
-                  Upgrade note: future build mein PDF invoice OCR, duplicate detection, aur smart party suggestion add ho sakta hai.
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("invoice")}>Invoice</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("ledger")}>Ledger</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("bank_statement")}>Bank Statement</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("party_list")}>Party List</Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              <Card className="border-emerald-200 bg-emerald-50/50">
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-emerald-600" />
-                    <p className="text-sm font-medium text-emerald-800">
-                      {uploadResult.fileName || "Uploaded file"} · {uploadResult.totalRows} rows detected
-                    </p>
-                    <Button variant="ghost" size="sm" className="ml-auto h-7 text-xs" onClick={() => setUploadResult(null)}>
-                      Change File
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Column mapping */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Column Mapping</CardTitle>
-                  <CardDescription className="text-xs">Apni file ke columns ko match karein</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {COLUMN_MAPPINGS.map(({ field, label }) => (
-                    <div key={field} className="flex items-center gap-3">
-                      <Label className="text-xs w-36 flex-shrink-0">{label}</Label>
-                      <Select value={mapping[field] || ""} onValueChange={v => setMapping(m => ({ ...m, [field]: v }))}>
-                        <SelectTrigger className="h-7 text-xs flex-1">
-                          <SelectValue placeholder="Select column..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Not mapped</SelectItem>
-                          {uploadResult.headers.map(h => <SelectItem key={h} value={h} className="text-xs">{h}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Preview */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Preview (first 5 rows)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {uploadResult.preview.length ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr>
-                            {uploadResult.headers.slice(0, 5).map(h => (
-                              <th key={h} className="text-left px-2 py-1 bg-muted font-medium">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {uploadResult.preview.map((row, i) => (
-                            <tr key={i} className="border-t">
-                              {uploadResult.headers.slice(0, 5).map(h => (
-                                <td key={h} className="px-2 py-1 text-muted-foreground">{row[h] || "—"}</td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground py-4 text-center">Preview unavailable for this file.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <div className="flex flex-col gap-2">
-                <Button onClick={handleConfirmImport} disabled={isImporting} className="w-full" size="lg">
-                  {isImporting ? "Import ho raha hai..." : `✅ Import Confirm Karein (${uploadResult.totalRows} rows)`}
-                </Button>
-                <p className="text-xs text-muted-foreground text-center">
-                  {uploadResult.invoiceMode ? `${uploadResult.invoiceMode.toUpperCase()} invoice mode selected` : "Invoice mode not set"}
-                </p>
-              </div>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Connectors tab */}
         <TabsContent value="connectors" className="mt-4 space-y-4">
-          <p className="text-sm text-muted-foreground">Mock connectors — demo data import karein</p>
           <div className="space-y-3">
             {CONNECTOR_CONFIG.map(conn => {
-              const source = sources.find(s => s.sourceType === conn.type);
-              const syncRes = syncResult[conn.type];
+              const source = getSourceStatus(conn.type);
+              const statusCfg = STATUS_CONFIG[source?.connectionStatus || "not_connected"];
+              const StatusIcon = statusCfg.icon;
+              const result = syncResult[conn.type];
+              const syncing = isSyncing === conn.type;
+
               return (
-                <Card key={conn.type}>
-                  <CardContent className="flex items-center gap-4 py-4 px-4">
-                    <div className={`w-10 h-10 rounded-xl ${conn.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-                      {conn.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{conn.name}</p>
-                      <p className="text-xs text-muted-foreground">{conn.description}</p>
-                      {source && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${STATUS_COLORS[source.connectionStatus] || STATUS_COLORS.not_connected}`}>
-                            {source.connectionStatus}
+                <Card key={conn.type} className={`border ${conn.border}`}>
+                  <CardContent className="py-4 px-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`w-11 h-11 rounded-xl ${conn.color} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
+                        {conn.shortName}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold">{conn.name}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${conn.badgeColor}`}>{conn.badge}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{conn.description}</p>
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          <span className={`flex items-center gap-1 text-xs ${statusCfg.cls}`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {statusCfg.label}
                           </span>
-                          {source.recordsImported > 0 && (
-                            <span className="text-xs text-muted-foreground">{source.recordsImported} records imported</span>
+                          {source?.lastSyncAt && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />Last: {new Date(source.lastSyncAt).toLocaleDateString("en-IN")}
+                            </span>
+                          )}
+                          {source?.recordsImported ? (
+                            <span className="text-xs text-muted-foreground">{source.recordsImported.toLocaleString()} records</span>
+                          ) : null}
+                          {result && (
+                            <span className="text-xs text-emerald-600 font-medium">✓ {result.message}</span>
                           )}
                         </div>
-                      )}
-                      {syncRes && (
-                        <p className="text-xs text-emerald-600 mt-0.5">{syncRes.message}</p>
-                      )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={source?.connectionStatus === "connected" ? "default" : "outline"}
+                        className="flex-shrink-0 gap-1.5"
+                        onClick={() => handleSync(conn.type)}
+                        disabled={!!isSyncing}
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+                        {syncing ? "Syncing..." : source?.connectionStatus === "connected" ? "Sync Now" : "Connect"}
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-shrink-0 gap-1.5"
-                      onClick={() => handleSync(conn.type)}
-                      disabled={isSyncing === conn.type}
-                    >
-                      {isSyncing === conn.type ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Zap className="h-3.5 w-3.5" />
-                      )}
-                      {isSyncing === conn.type ? "Syncing..." : "Mock Sync"}
-                    </Button>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
+
+          <Card className="border-dashed border-slate-300 bg-slate-50/50">
+            <CardContent className="py-4 px-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-slate-200 flex items-center justify-center flex-shrink-0">
+                <ArrowRight className="h-4 w-4 text-slate-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700">Bank Statement Import</p>
+                <p className="text-xs text-muted-foreground">CSV/Excel se bank entries import karein for reconciliation</p>
+              </div>
+              <Button variant="outline" size="sm" className="ml-auto flex-shrink-0" onClick={() => {
+                const el = document.querySelector('[data-tab="upload"]') as HTMLButtonElement;
+                if (el) el.click();
+              }}>Import CSV</Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* History tab */}
+        <TabsContent value="upload" className="mt-4 space-y-4" data-tab="upload">
+          {!uploadResult ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">File Upload</CardTitle>
+                <CardDescription>CSV, Excel (.xlsx), ya PDF invoice upload karein</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Import Type</Label>
+                    <Select value={uploadMode} onValueChange={v => setUploadMode(v as UploadMode)}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="invoice">Invoice (Kacha/Pakka)</SelectItem>
+                        <SelectItem value="ledger">Party Ledger</SelectItem>
+                        <SelectItem value="bank_statement">Bank Statement</SelectItem>
+                        <SelectItem value="party_list">Party List</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {uploadMode === "invoice" && (
+                    <div>
+                      <Label className="text-xs">Invoice Mode</Label>
+                      <Select value={invoiceMode} onValueChange={v => setInvoiceMode(v as "kacha" | "pakka")}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kacha">Kacha (Draft)</SelectItem>
+                          <SelectItem value="pakka">Pakka (Confirmed)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="border-2 border-dashed border-border rounded-xl p-10 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="font-medium">Yahan drop karein ya click karein</p>
+                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel, PDF · Max 10MB</p>
+                  {isUploading && <p className="text-sm text-primary mt-2 animate-pulse">Uploading...</p>}
+                </div>
+                <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls,.pdf" className="hidden" onChange={handleFileUpload} />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Column Mapping</CardTitle>
+                  <Badge variant="secondary">{uploadResult.totalRows} rows</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  {uploadResult.headers.map(header => (
+                    <div key={header} className="flex items-center gap-3">
+                      <span className="text-sm font-medium w-40 flex-shrink-0 truncate">{header}</span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <Select value={mapping[header] || "skip"} onValueChange={v => setMapping(m => ({ ...m, [header]: v }))}>
+                        <SelectTrigger className="flex-1 h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="skip">— Skip —</SelectItem>
+                          {COLUMN_MAPPINGS.map(c => <SelectItem key={c.field} value={c.field}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setUploadResult(null)}>Cancel</Button>
+                  <Button className="flex-1" disabled={isImporting} onClick={handleConfirmImport}>
+                    {isImporting ? "Importing..." : `Import ${uploadResult.totalRows} Rows`}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         <TabsContent value="history" className="mt-4 space-y-3">
           {!jobs.length ? (
             <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Koi import history nahi hai — upload karke shuru karein
+              <CardContent className="py-10 text-center">
+                <FileText className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">Abhi koi import history nahi hai</p>
               </CardContent>
             </Card>
           ) : jobs.map(job => (
             <Card key={job.id}>
-              <CardContent className="flex items-center gap-3 py-3 px-4">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  job.status === "completed" ? "bg-emerald-100" :
-                  job.status === "failed" ? "bg-red-100" : "bg-amber-100"
-                }`}>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${job.status === "completed" ? "bg-emerald-50" : job.status === "failed" ? "bg-red-50" : "bg-amber-50"}`}>
                   {job.status === "completed"
                     ? <CheckCircle className="h-4 w-4 text-emerald-600" />
-                    : <AlertCircle className="h-4 w-4 text-amber-600" />}
+                    : job.status === "failed"
+                    ? <AlertCircle className="h-4 w-4 text-red-500" />
+                    : <RefreshCw className="h-4 w-4 text-amber-600 animate-spin" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{job.importType} import</p>
+                  <p className="text-sm font-medium capitalize">{job.importType.replace(/_/g, " ")} import</p>
                   <p className="text-xs text-muted-foreground">
-                    {job.successfulRecords}/{job.totalRecords} records • {new Date(job.createdAt).toLocaleDateString("en-IN")}
+                    {job.successfulRecords}/{job.totalRecords} records · {new Date(job.createdAt).toLocaleDateString("en-IN")}
                   </p>
                 </div>
-                <Badge variant={job.status === "completed" ? "default" : "secondary"} className="text-xs flex-shrink-0">
+                <Badge variant="outline" className={`text-xs ${
+                  job.status === "completed" ? "text-emerald-600 border-emerald-300" :
+                  job.status === "failed" ? "text-red-600 border-red-300" : "text-amber-600 border-amber-300"
+                }`}>
                   {job.status}
                 </Badge>
               </CardContent>

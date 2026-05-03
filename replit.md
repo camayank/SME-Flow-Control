@@ -132,20 +132,21 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 
 ## Frontend Pages
 
-- `/login` — OTP login (mobile + 123456)
+- `/login` — Two-panel desktop layout: left=Tally/Marg/BUSY value props + feature list; right=OTP login form. Mobile collapses to centered form. Quick Demo Login button.
 - `/onboarding` — business setup (name, type, city, GST, UPI)
-- `/` — Dashboard (KPIs, 6-month bar chart, insights cards, low-stock alert, aging chart, top debtors, recent activity)
+- `/` — Dashboard: KPIs, 6-month bar chart, Virtual CFO 3-panel insight card (cash flow/collections/recon), low-stock alert, aging chart, top debtors (nested-anchor-safe, nav by onClick), recent activity
 - `/parchi` — Parchi Entry (text parser + manual form, localStorage draft saving)
-- `/parties` — Party list + add party dialog
+- `/parties` — Party list with balance stats row (total, lena, dena, net), search+filter, left-border balance indicators, nested-anchor-safe navigation (onClick + stopPropagation on WhatsApp)
 - `/parties/:id` — Party detail: Ledger tab (Dr/Cr running balance table, date filter), Invoices tab, Follow-ups tab (history + add new, promise tracking)
 - `/outstandings` — Outstandings list + aging chart
-- `/collections` — Collection CRM + WhatsApp reminder generator
+- `/collections` — Collection CRM: stats row, Virtual CFO insight strip (top-3 concentration, top party, overdue count, never-followed-up), priority-sorted list, WhatsApp reminder generator
 - `/follow-ups` — Follow-up management hub: Overdue / Today / Upcoming / All tabs, auto-schedule, add manual follow-up, reschedule, promise tracking, mark done
 - `/reconciliation` — Reconciliation queue with actions
-- `/import` — CSV import + mock connector sync
+- `/import` — Connector-first layout: Tally/BUSY/Marg cards with status/last-sync/record count; CSV upload as secondary tab; import history
 - `/invoices` — GST Invoice builder (line items, CGST/SGST/IGST, print view, draft saving)
 - `/items` — Item Master (HSN, GST rate, stock, reorder level, low-stock alerts, stock adjust)
 - `/reports` — Reports (P&L, Trends, Sales Register, Purchase Register, Aging, Receivables, Ops) with CSV export
+- `/audit` — Audit trail: stats row, search/filter by entity type & action, color-coded action badges with icons, expandable diff view (before/after field-level), pagination
 
 ## Database Schema (in `lib/db/src/schema/`)
 

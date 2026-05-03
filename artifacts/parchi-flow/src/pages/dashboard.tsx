@@ -156,8 +156,8 @@ export default function DashboardPage() {
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <p className="text-sm font-semibold text-emerald-900">What changed today</p>
-              <p className="text-xs text-emerald-900/75 mt-1">Tally, Marg, Busy aur similar users ko complex BI nahi chahiye — real syncing, clear overview, and decision support chahiye.</p>
+              <p className="text-sm font-semibold text-emerald-900">Aaj ka activity</p>
+              <p className="text-xs text-emerald-900/75 mt-1">Real entries, touched parties, aur follow-ups — static totals se zyada useful</p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="rounded-full bg-white px-2.5 py-1 border border-emerald-200">Actions: {data?.today?.activityCount || 0}</span>
@@ -400,8 +400,11 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y">
                 {data.topDebtors.map((debtor, i) => (
-                  <Link key={debtor.partyId} href={`/parties/${debtor.partyId}`}>
-                    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                  <div
+                    key={debtor.partyId}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => { window.location.href = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/parties/${debtor.partyId}`; }}
+                  >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{i + 1}</div>
                       <div className="min-w-0">
@@ -412,14 +415,19 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-sm font-semibold text-red-600">{formatCurrency(debtor.amountDue)}</span>
                       {debtor.mobile && (
-                        <a href={`https://wa.me/91${debtor.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(`Namaste, please pay your outstanding amount of ₹${debtor.amountDue.toLocaleString("en-IN")}`)}`}
-                          target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600" title="WhatsApp">
+                        <a
+                          href={`https://wa.me/91${debtor.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(`Namaste, please pay your outstanding amount of ₹${debtor.amountDue.toLocaleString("en-IN")}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600"
+                          title="WhatsApp"
+                          onClick={e => e.stopPropagation()}
+                        >
                           <MessageCircle className="h-4 w-4" />
                         </a>
                       )}
                     </div>
-                    </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}
@@ -468,15 +476,40 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="border-dashed border-emerald-300 bg-emerald-50/40">
-        <CardContent className="pt-4 pb-4 flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <p className="font-semibold text-emerald-900">Launch-ready drill-down flow</p>
-            <p className="text-sm text-emerald-900/75">One tap from dashboard to parties, collections, follow-ups, audit trail, and reports.</p>
+      <Card className="border-primary/15 bg-primary/5">
+        <CardContent className="pt-4 pb-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <p className="font-semibold">Virtual CFO — aaj kya dekhein</p>
           </div>
-          <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-            <Link href="/follow-ups"><ShieldCheck className="h-4 w-4 mr-1.5" />Open follow-up hub</Link>
-          </Button>
+          <div className="grid gap-2 md:grid-cols-3">
+            <div className="rounded-lg border bg-background p-3">
+              <p className="text-xs font-semibold mb-1">💰 Cash flow check</p>
+              <p className="text-xs text-muted-foreground">
+                {data?.cashFlow?.netCashFlow !== undefined
+                  ? (data.cashFlow.netCashFlow >= 0
+                    ? `Net +${formatCurrency(data.cashFlow.netCashFlow)} — inflows strong hain`
+                    : `Net ${formatCurrency(data.cashFlow.netCashFlow)} — outflows zyada, dhyan rakhein`)
+                  : "30-day inflow vs outflow ka net position — sync karein zyada detail ke liye"}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-background p-3">
+              <p className="text-xs font-semibold mb-1">🎯 Collections focus</p>
+              <p className="text-xs text-muted-foreground">
+                {data?.overdue?.count
+                  ? `${data.overdue.count} parties overdue — ${formatCurrency(data.overdue.amount)} stuck. Abhi follow-up karein.`
+                  : "Koi overdue nahi hai — follow-ups schedule karte raho."}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-background p-3">
+              <p className="text-xs font-semibold mb-1">⚡ Recon alert</p>
+              <p className="text-xs text-muted-foreground">
+                {data?.reconciliation?.total
+                  ? `${data.reconciliation.total} items pending — month-end se pehle resolve karein.`
+                  : "Reconciliation clear hai — accounts tidy hain."}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

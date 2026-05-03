@@ -11,7 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Phone, Copy, ExternalLink, Send, Clock, CheckCircle, Plus, ChevronRight } from "lucide-react";
+import {
+  MessageCircle, Phone, Copy, ExternalLink, Clock, CheckCircle,
+  Plus, AlertTriangle, TrendingUp, IndianRupee, Zap,
+} from "lucide-react";
 
 interface Outstanding {
   id: number;
@@ -36,6 +39,18 @@ interface ReminderResult {
 }
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+const PRIORITY_COLORS: Record<string, string> = {
+  critical: "border-l-red-600",
+  high: "border-l-orange-500",
+  medium: "border-l-amber-500",
+  low: "border-l-slate-300",
+};
+const PRIORITY_BADGE: Record<string, string> = {
+  critical: "bg-red-100 text-red-700",
+  high: "bg-orange-100 text-orange-700",
+  medium: "bg-amber-100 text-amber-700",
+  low: "bg-slate-100 text-slate-600",
+};
 
 export default function CollectionsPage() {
   const [selectedOutstanding, setSelectedOutstanding] = useState<Outstanding | null>(null);
@@ -66,6 +81,15 @@ export default function CollectionsPage() {
     (PRIORITY_ORDER[a.priority as keyof typeof PRIORITY_ORDER] ?? 3) -
     (PRIORITY_ORDER[b.priority as keyof typeof PRIORITY_ORDER] ?? 3)
   );
+
+  const totalDue = sorted.reduce((s, o) => s + o.amountDue, 0);
+  const criticalCount = sorted.filter(o => o.priority === "critical" || o.priority === "high").length;
+  const neverFollowedUp = sorted.filter(o => !o.lastFollowUpAt).length;
+  const overdueCount = sorted.filter(o => o.agingDays > 0).length;
+
+  const topParty = sorted[0];
+  const top3Amount = sorted.slice(0, 3).reduce((s, o) => s + o.amountDue, 0);
+  const top3Pct = totalDue > 0 ? Math.round((top3Amount / totalDue) * 100) : 0;
 
   const handleGenerateReminder = async (o: Outstanding) => {
     setSelectedOutstanding(o);
@@ -120,58 +144,70 @@ export default function CollectionsPage() {
     }
   };
 
-  const criticalCount = sorted.filter(o => o.priority === "critical" || o.priority === "high").length;
-
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-xl font-bold">Collection CRM</h1>
-        <p className="text-sm text-muted-foreground">WhatsApp reminders aur follow-up tracking</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Collection CRM</h1>
+          <p className="text-sm text-muted-foreground">Priority-wise follow-up, WhatsApp reminder, aur collection tracking</p>
+        </div>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/follow-ups">Follow-up Hub</Link>
+        </Button>
       </div>
 
-      <Card className="border-dashed border-primary/25 bg-primary/5">
-        <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium">Collections playbook</p>
-            <p className="text-xs text-muted-foreground">Step-by-step follow-up, logging, and due tracking for every party.</p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/reports">View Reports</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="border-red-100">
           <CardContent className="pt-4 pb-3 text-center">
             <p className="text-2xl font-bold text-red-600">{criticalCount}</p>
-            <p className="text-xs text-muted-foreground">Critical/High</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Critical / High</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3 text-center">
             <p className="text-2xl font-bold">{sorted.length}</p>
-            <p className="text-xs text-muted-foreground">Total Pending</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Total Pending</p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-100">
+          <CardContent className="pt-4 pb-3 text-center">
+            <p className="text-2xl font-bold text-amber-600">{neverFollowedUp}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">No Follow-up Yet</p>
           </CardContent>
         </Card>
         <Card className="border-emerald-100">
           <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-2xl font-bold text-emerald-600">
-              {formatCurrency(sorted.reduce((s, o) => s + o.amountDue, 0))}
-            </p>
-            <p className="text-xs text-muted-foreground">Total Due</p>
+            <p className="text-xl font-bold text-emerald-600">{formatCurrency(totalDue)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Total Due</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-        <div className="rounded-lg bg-muted/40 px-3 py-2">Priority sorting first.</div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2">Reminder can be copied or sent on WhatsApp.</div>
-        <div className="rounded-lg bg-muted/40 px-3 py-2">Every call/message can be logged.</div>
-      </div>
+      {sorted.length > 0 && (
+        <Card className="border-primary/15 bg-primary/5">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">CFO View</p>
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2 text-xs text-muted-foreground">
+              {top3Pct > 0 && (
+                <span>📊 Top 3 parties = <strong className="text-foreground">{top3Pct}%</strong> of total due ({formatCurrency(top3Amount)})</span>
+              )}
+              {topParty && (
+                <span>🎯 Highest: <strong className="text-foreground">{topParty.partyName}</strong> — {formatCurrency(topParty.amountDue)}</span>
+              )}
+              {overdueCount > 0 && (
+                <span>⏰ <strong className="text-foreground">{overdueCount}</strong> parties overdue — call first, WhatsApp second</span>
+              )}
+              {neverFollowedUp > 0 && (
+                <span>💡 <strong className="text-foreground">{neverFollowedUp}</strong> parties never followed up — start there</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Party list */}
       {!sorted.length ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -185,64 +221,66 @@ export default function CollectionsPage() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {sorted.map(o => {
-            const priorityColors: Record<string, string> = {
-              critical: "border-l-red-600",
-              high: "border-l-orange-500",
-              medium: "border-l-amber-500",
-              low: "border-l-slate-300",
-            };
-            return (
-              <Card key={o.id} className={`border-l-4 ${priorityColors[o.priority] || "border-l-slate-300"}`}>
-                <CardContent className="flex items-center gap-3 py-3 px-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm">{o.partyName || "Unknown"}</p>
-                      {o.agingDays > 0 && (
-                        <span className="text-xs bg-red-50 text-red-700 px-1.5 py-0.5 rounded">
-                          {o.agingDays}d overdue
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      {o.partyMobile && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Phone className="h-3 w-3" />{o.partyMobile}
-                        </span>
-                      )}
-                      {o.lastFollowUpAt && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />Last: {formatDate(o.lastFollowUpAt)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <p className="text-sm font-bold text-red-600">{formatCurrency(o.amountDue)}</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                      onClick={() => handleGenerateReminder(o)}
+          {sorted.map(o => (
+            <Card key={o.id} className={`border-l-4 ${PRIORITY_COLORS[o.priority] || "border-l-slate-300"}`}>
+              <CardContent className="flex items-center gap-3 py-3 px-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      className="font-medium text-sm hover:text-primary hover:underline text-left"
+                      onClick={() => { window.location.href = `/parchi-flow/parties/${o.partyId}`; }}
                     >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      Remind
-                    </Button>
+                      {o.partyName || "Unknown"}
+                    </button>
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${PRIORITY_BADGE[o.priority] || "bg-slate-100 text-slate-600"}`}>
+                      {o.priority}
+                    </span>
+                    {o.agingDays > 0 && (
+                      <span className="text-xs bg-red-50 text-red-700 px-1.5 py-0.5 rounded">
+                        {o.agingDays}d overdue
+                      </span>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    {o.partyMobile && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />{o.partyMobile}
+                      </span>
+                    )}
+                    {o.lastFollowUpAt && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />Last: {formatDate(o.lastFollowUpAt)}
+                      </span>
+                    )}
+                    {!o.lastFollowUpAt && (
+                      <span className="text-xs text-amber-600 font-medium">No follow-up yet</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <p className="text-sm font-bold text-red-600">{formatCurrency(o.amountDue)}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                    onClick={() => handleGenerateReminder(o)}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Remind
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* Reminder Dialog */}
       <Dialog open={reminderDialog} onOpenChange={setReminderDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-emerald-600" />
-              WhatsApp Reminder Generate Karein
+              WhatsApp Reminder
             </DialogTitle>
           </DialogHeader>
 
@@ -252,7 +290,7 @@ export default function CollectionsPage() {
                 <p className="text-sm font-medium">{selectedOutstanding?.partyName}</p>
                 <p className="text-xs text-muted-foreground">
                   Due: {selectedOutstanding && formatCurrency(selectedOutstanding.amountDue)}
-                  {selectedOutstanding?.agingDays ? ` • ${selectedOutstanding.agingDays}d overdue` : ""}
+                  {selectedOutstanding?.agingDays ? ` · ${selectedOutstanding.agingDays}d overdue` : ""}
                 </p>
               </div>
             </div>
@@ -330,20 +368,17 @@ export default function CollectionsPage() {
 
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={copyMessage} disabled={!generatedReminder?.message} className="gap-1.5">
-              <Copy className="h-4 w-4" />
-              Copy
+              <Copy className="h-4 w-4" />Copy
             </Button>
             {generatedReminder?.whatsappUrl && (
               <Button asChild variant="default" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 flex-1">
                 <a href={generatedReminder.whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={handleSendAndLog}>
-                  <ExternalLink className="h-4 w-4" />
-                  WhatsApp Kholo
+                  <ExternalLink className="h-4 w-4" />WhatsApp Kholo
                 </a>
               </Button>
             )}
             <Button variant="outline" onClick={handleSendAndLog} className="gap-1.5">
-              <CheckCircle className="h-4 w-4" />
-              Log Follow-up
+              <CheckCircle className="h-4 w-4" />Log Follow-up
             </Button>
           </DialogFooter>
         </DialogContent>
