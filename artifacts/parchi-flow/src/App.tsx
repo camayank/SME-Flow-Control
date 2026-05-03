@@ -15,15 +15,14 @@ import CollectionsPage from "@/pages/collections";
 import ReconciliationPage from "@/pages/reconciliation";
 import ImportPage from "@/pages/import";
 import ReportsPage from "@/pages/reports";
+import ItemsPage from "@/pages/items";
+import InvoicesPage from "@/pages/invoices";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 30000,
-      retry: 1,
-    },
+    queries: { staleTime: 30000, retry: 1 },
   },
 });
 
@@ -65,6 +64,8 @@ function AppContent() {
       <Switch>
         <Route path="/" component={DashboardPage} />
         <Route path="/parchi" component={ParchiPage} />
+        <Route path="/invoices" component={InvoicesPage} />
+        <Route path="/items" component={ItemsPage} />
         <Route path="/parties" component={PartiesPage} />
         <Route path="/parties/:id" component={PartyDetailPage} />
         <Route path="/outstandings" component={OutstandingsPage} />

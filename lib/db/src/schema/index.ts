@@ -8,3 +8,6 @@ export * from "./payments";
 export * from "./reconciliation";
 export * from "./followups";
 export * from "./datasources";
+export * from "./items";
+export * from "./invoices";
+export * from "./audit_logs";

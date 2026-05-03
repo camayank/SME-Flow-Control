@@ -50,14 +50,3 @@ export const syncLogsTable = pgTable("sync_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const auditLogsTable = pgTable("audit_logs", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id"),
-  businessId: integer("business_id").notNull(),
-  action: text("action").notNull(),
-  entityType: text("entity_type").notNull(),
-  entityId: text("entity_id").notNull(),
-  beforeJson: text("before_json"),
-  afterJson: text("after_json"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});

@@ -13,6 +13,9 @@ import datasourcesRouter from "./datasources";
 import connectorsRouter from "./connectors";
 import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
+import itemsRouter from "./items";
+import invoicesRouter from "./invoices";
+import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
@@ -30,5 +33,8 @@ router.use(datasourcesRouter);
 router.use(connectorsRouter);
 router.use(dashboardRouter);
 router.use(reportsRouter);
+router.use(itemsRouter);
+router.use(invoicesRouter);
+router.use(auditRouter);
 
 export default router;

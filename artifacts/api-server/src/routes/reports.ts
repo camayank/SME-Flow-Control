@@ -3,8 +3,9 @@ import { db } from "@workspace/db";
 import {
   partiesTable, outstandingsTable, moneyEventsTable, reconciliationQueueTable,
   followUpsTable, ledgerEntriesTable, dataSourcesTable, syncLogsTable, businessesTable,
+  invoicesTable, invoiceItemsTable,
 } from "@workspace/db/schema";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { authMiddleware, type AuthRequest } from "../middlewares/auth.js";
 import { calculateAging, getAgingLabel } from "../services/outstanding-engine.js";
 
@@ -258,6 +259,197 @@ router.get("/reports/party-statement/:partyId", authMiddleware, async (req: Auth
     closingBalance: runningBalance,
     statement,
   });
+});
+
+// GET /api/reports/pl — Profit & Loss Summary
+router.get("/reports/pl", authMiddleware, async (req: AuthRequest, res) => {
+  const businessId = await getBusinessId(req.userId!);
+  if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+
+  const { from, to } = req.query;
+  const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const toDate = to ? new Date(to as string) : new Date();
+
+  const conditions = [
+    eq(moneyEventsTable.businessId, businessId),
+    gte(moneyEventsTable.eventDate, fromDate),
+    lte(moneyEventsTable.eventDate, toDate),
+  ];
+
+  const events = await db.select().from(moneyEventsTable).where(and(...conditions));
+
+  const salesRevenue = events.filter(e => e.direction === "inflow" && ["payment_received", "credit_sale", "advance_received"].includes(e.eventType))
+    .reduce((s, e) => s + parseFloat(e.amount), 0);
+
+  const purchaseCost = events.filter(e => e.direction === "outflow" && ["payment_made", "advance_paid"].includes(e.eventType))
+    .reduce((s, e) => s + parseFloat(e.amount), 0);
+
+  const expenses = events.filter(e => e.direction === "outflow" && e.eventType === "expense")
+    .reduce((s, e) => s + parseFloat(e.amount), 0);
+
+  const otherIncome = events.filter(e => e.direction === "inflow" && !["payment_received", "credit_sale", "advance_received"].includes(e.eventType))
+    .reduce((s, e) => s + parseFloat(e.amount), 0);
+
+  // Invoice-based totals
+  const invConditions = [
+    eq(invoicesTable.businessId, businessId),
+    gte(invoicesTable.invoiceDate, fromDate),
+    lte(invoicesTable.invoiceDate, toDate),
+  ];
+  const invoices = await db.select().from(invoicesTable).where(and(...invConditions));
+
+  const salesInvoiceTotal = invoices.filter(i => i.invoiceType === "sale").reduce((s, i) => s + parseFloat(i.total), 0);
+  const purchaseInvoiceTotal = invoices.filter(i => i.invoiceType === "purchase").reduce((s, i) => s + parseFloat(i.total), 0);
+
+  const grossProfit = salesRevenue - purchaseCost;
+  const netProfit = grossProfit - expenses + otherIncome;
+
+  const monthlyBreakdown: Record<string, { sales: number; purchases: number; expenses: number }> = {};
+  for (const e of events) {
+    const month = new Date(e.eventDate).toLocaleString("en-IN", { month: "short", year: "2-digit" });
+    if (!monthlyBreakdown[month]) monthlyBreakdown[month] = { sales: 0, purchases: 0, expenses: 0 };
+    if (e.direction === "inflow") monthlyBreakdown[month].sales += parseFloat(e.amount);
+    else if (e.eventType === "expense") monthlyBreakdown[month].expenses += parseFloat(e.amount);
+    else monthlyBreakdown[month].purchases += parseFloat(e.amount);
+  }
+
+  res.json({
+    period: { from: fromDate, to: toDate },
+    revenue: { salesRevenue, otherIncome, total: salesRevenue + otherIncome },
+    costs: { purchaseCost, expenses, total: purchaseCost + expenses },
+    grossProfit,
+    netProfit,
+    margin: salesRevenue > 0 ? ((netProfit / salesRevenue) * 100).toFixed(1) : "0",
+    invoiceSummary: { salesInvoiceTotal, purchaseInvoiceTotal },
+    monthlyBreakdown: Object.entries(monthlyBreakdown).map(([month, v]) => ({ month, ...v })),
+  });
+});
+
+// GET /api/reports/sales-register
+router.get("/reports/sales-register", authMiddleware, async (req: AuthRequest, res) => {
+  const businessId = await getBusinessId(req.userId!);
+  if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+
+  const { from, to } = req.query;
+  const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const toDate = to ? new Date(to as string) : new Date();
+
+  const invs = await db.select({
+    invoice: invoicesTable,
+    partyName: partiesTable.name,
+  }).from(invoicesTable)
+    .leftJoin(partiesTable, eq(invoicesTable.partyId, partiesTable.id))
+    .where(and(
+      eq(invoicesTable.businessId, businessId),
+      eq(invoicesTable.invoiceType, "sale"),
+      gte(invoicesTable.invoiceDate, fromDate),
+      lte(invoicesTable.invoiceDate, toDate),
+    ))
+    .orderBy(desc(invoicesTable.invoiceDate));
+
+  const totalSales = invs.reduce((s, { invoice }) => s + parseFloat(invoice.total), 0);
+  const totalGst = invs.reduce((s, { invoice }) => s + parseFloat(invoice.cgstTotal) + parseFloat(invoice.sgstTotal) + parseFloat(invoice.igstTotal), 0);
+  const totalTaxable = invs.reduce((s, { invoice }) => s + parseFloat(invoice.subtotal), 0);
+
+  res.json({
+    period: { from: fromDate, to: toDate },
+    summary: { totalSales, totalGst, totalTaxable, count: invs.length },
+    items: invs.map(({ invoice, partyName }) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate,
+      partyName: invoice.partyName || partyName,
+      partyGstin: invoice.partyGstin,
+      subtotal: parseFloat(invoice.subtotal),
+      cgst: parseFloat(invoice.cgstTotal),
+      sgst: parseFloat(invoice.sgstTotal),
+      igst: parseFloat(invoice.igstTotal),
+      total: parseFloat(invoice.total),
+      status: invoice.status,
+    })),
+  });
+});
+
+// GET /api/reports/purchase-register
+router.get("/reports/purchase-register", authMiddleware, async (req: AuthRequest, res) => {
+  const businessId = await getBusinessId(req.userId!);
+  if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+
+  const { from, to } = req.query;
+  const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const toDate = to ? new Date(to as string) : new Date();
+
+  const invs = await db.select({
+    invoice: invoicesTable,
+    partyName: partiesTable.name,
+  }).from(invoicesTable)
+    .leftJoin(partiesTable, eq(invoicesTable.partyId, partiesTable.id))
+    .where(and(
+      eq(invoicesTable.businessId, businessId),
+      eq(invoicesTable.invoiceType, "purchase"),
+      gte(invoicesTable.invoiceDate, fromDate),
+      lte(invoicesTable.invoiceDate, toDate),
+    ))
+    .orderBy(desc(invoicesTable.invoiceDate));
+
+  const totalPurchase = invs.reduce((s, { invoice }) => s + parseFloat(invoice.total), 0);
+  const totalGst = invs.reduce((s, { invoice }) => s + parseFloat(invoice.cgstTotal) + parseFloat(invoice.sgstTotal) + parseFloat(invoice.igstTotal), 0);
+
+  res.json({
+    period: { from: fromDate, to: toDate },
+    summary: { totalPurchase, totalGst, count: invs.length },
+    items: invs.map(({ invoice, partyName }) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate,
+      partyName: invoice.partyName || partyName,
+      partyGstin: invoice.partyGstin,
+      subtotal: parseFloat(invoice.subtotal),
+      cgst: parseFloat(invoice.cgstTotal),
+      sgst: parseFloat(invoice.sgstTotal),
+      igst: parseFloat(invoice.igstTotal),
+      total: parseFloat(invoice.total),
+      status: invoice.status,
+    })),
+  });
+});
+
+// GET /api/reports/monthly-trends
+router.get("/reports/monthly-trends", authMiddleware, async (req: AuthRequest, res) => {
+  const businessId = await getBusinessId(req.userId!);
+  if (!businessId) { res.status(404).json({ error: "Business not found" }); return; }
+
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+  sixMonthsAgo.setHours(0, 0, 0, 0);
+
+  const events = await db.select().from(moneyEventsTable).where(
+    and(eq(moneyEventsTable.businessId, businessId), gte(moneyEventsTable.eventDate, sixMonthsAgo))
+  );
+
+  const monthMap: Record<string, { month: string; inflow: number; outflow: number; net: number }> = {};
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("en-IN", { month: "short", year: "2-digit" });
+    monthMap[key] = { month: label, inflow: 0, outflow: 0, net: 0 };
+  }
+
+  for (const e of events) {
+    const d = new Date(e.eventDate);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (monthMap[key]) {
+      const amt = parseFloat(e.amount);
+      if (e.direction === "inflow") monthMap[key].inflow += amt;
+      else monthMap[key].outflow += amt;
+      monthMap[key].net = monthMap[key].inflow - monthMap[key].outflow;
+    }
+  }
+
+  res.json({ months: Object.values(monthMap) });
 });
 
 export default router;

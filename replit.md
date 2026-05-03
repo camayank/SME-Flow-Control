@@ -2,7 +2,7 @@
 
 ## Overview
 
-Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, party ledger, Excel/CSV/bank statement import, reconciliation engine, payment matching, WhatsApp click-to-chat reminders, collection CRM, Tally/BUSY/Marg mock connectors, and dashboard.
+Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, party ledger, Excel/CSV/bank statement import, reconciliation engine, payment matching, WhatsApp click-to-chat reminders, collection CRM, Tally/BUSY/Marg mock connectors, GST invoicing, item master with stock tracking, P&L reports, sales/purchase registers, monthly trends, and audit trail.
 
 ## Artifacts
 
@@ -44,6 +44,20 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `GET/POST /api/parties` — list/create parties
 - `GET/PUT/DELETE /api/parties/:id` — get/update/delete party
 - `GET /api/parties/:id/ledger` — party ledger + summary
+
+### Items (Item Master)
+- `GET /api/items` — list items (with lowStockCount)
+- `POST /api/items` — create item (HSN, GST rate, stock, reorder level)
+- `PUT /api/items/:id` — update item
+- `DELETE /api/items/:id` — delete item
+- `POST /api/items/:id/adjust-stock` — adjust stock (+/-)
+
+### Invoices (GST-aware)
+- `GET /api/invoices` — list invoices (with filters: type, status, party, search)
+- `POST /api/invoices` — create invoice (auto-numbers INV/PUR/CN/DN, auto-creates ledger+outstanding, adjusts stock)
+- `GET /api/invoices/:id` — invoice detail with line items
+- `PUT /api/invoices/:id/mark-paid` — mark invoice as paid
+- `PUT /api/invoices/:id/cancel` — cancel invoice
 
 ### Parchi (Money Events)
 - `POST /api/parchi/parse` — parse Hinglish/Hindi/English text
@@ -92,7 +106,7 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `POST /api/connectors/payment-gateway/webhook` — payment gateway webhook
 
 ### Dashboard & Reports
-- `GET /api/dashboard` — full dashboard data
+- `GET /api/dashboard` — full dashboard data + insights cards
 - `GET /api/reports/receivables` — receivables report
 - `GET /api/reports/payables` — payables report
 - `GET /api/reports/aging` — aging breakdown
@@ -101,20 +115,29 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `GET /api/reports/reconciliation` — recon report
 - `GET /api/reports/source-sync` — data source sync report
 - `GET /api/reports/party-statement/:partyId` — party statement
+- `GET /api/reports/pl` — P&L statement (revenue, costs, gross/net profit, margin)
+- `GET /api/reports/sales-register` — GST sales register
+- `GET /api/reports/purchase-register` — GST purchase register
+- `GET /api/reports/monthly-trends` — 6-month inflow/outflow/net trends
+
+### Audit
+- `GET /api/audit` — audit trail (filterable by entity_type, limit)
 
 ## Frontend Pages
 
 - `/login` — OTP login (mobile + 123456)
 - `/onboarding` — business setup (name, type, city, GST, UPI)
-- `/` — Dashboard (KPIs, aging chart, top debtors, recent activity)
-- `/parchi` — Parchi Entry (text parser + manual form)
+- `/` — Dashboard (KPIs, 6-month bar chart, insights cards, low-stock alert, aging chart, top debtors, recent activity)
+- `/parchi` — Parchi Entry (text parser + manual form, localStorage draft saving)
 - `/parties` — Party list + add party dialog
 - `/parties/:id` — Party detail + ledger statement
 - `/outstandings` — Outstandings list + aging chart
 - `/collections` — Collection CRM + WhatsApp reminder generator
 - `/reconciliation` — Reconciliation queue with actions
 - `/import` — CSV import + mock connector sync
-- `/reports` — Reports (aging, receivables, collections)
+- `/invoices` — GST Invoice builder (line items, CGST/SGST/IGST, print view, draft saving)
+- `/items` — Item Master (HSN, GST rate, stock, reorder level, low-stock alerts, stock adjust)
+- `/reports` — Reports (P&L, Trends, Sales Register, Purchase Register, Aging, Receivables, Ops) with CSV export
 
 ## Database Schema (in `lib/db/src/schema/`)
 
@@ -129,13 +152,23 @@ Full-stack mobile-first web app for Indian SMEs. Provides manual parchi entry, p
 - `reconciliation_queue` — pending reconciliation items
 - `follow_ups` + `reminder_logs` — collection CRM
 - `data_sources` + `import_jobs` + `sync_logs` — import tracking
+- `items` — item master (HSN, GST rate, stock qty, reorder level, unit)
+- `invoices` — GST invoices (sale/purchase/credit-note/debit-note, CGST/SGST/IGST, inter-state)
+- `invoice_items` — line items per invoice (qty, rate, discount, tax)
+- `audit_logs` — audit trail (action, entity, before/after, description)
+
+## Invoice Auto-numbering
+- Sales: `INV/YY/0001`, `INV/YY/0002`, ...
+- Purchases: `PUR/YY/0001`, ...
+- Credit Notes: `CN/YY/0001`, ...
+- Debit Notes: `DN/YY/0001`, ...
 
 ## Key Commands
 
 ```bash
-pnpm --filter @workspace/db run push          # Push schema to DB
-pnpm --filter @workspace/api-server run build # Build API server
-pnpm run typecheck                             # Full type check
+cd lib/db && pnpm run push               # Push schema to DB (run from lib/db dir)
+pnpm --filter @workspace/api-server run build  # Build API server
+pnpm run typecheck                        # Full type check
 ```
 
 ## Environment Variables
@@ -143,3 +176,9 @@ pnpm run typecheck                             # Full type check
 - `DATABASE_URL` — PostgreSQL connection string
 - `SESSION_SECRET` — JWT signing secret
 - `PORT` — server port (injected by Replit per artifact)
+
+## Notes
+
+- Invoice draft saving uses localStorage key `parchiflow_invoice_draft`
+- Demo credentials: mobile `9876543210`, OTP `123456`
+- `auditLogsTable` is defined in `lib/db/src/schema/audit_logs.ts` only (removed duplicate from datasources.ts)

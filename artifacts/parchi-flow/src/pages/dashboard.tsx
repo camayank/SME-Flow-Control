@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
-import { apiUrl, formatCurrency, formatDate } from "@/lib/api";
-import { getAuthToken } from "@/lib/api";
+import { apiUrl, formatCurrency, formatDate, getAuthToken } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   TrendingUp, TrendingDown, AlertTriangle, RefreshCw,
   Users, ArrowUpRight, ArrowDownRight, Plus, MessageCircle,
-  Clock, BarChart3, ChevronRight, IndianRupee,
+  Clock, BarChart3, ChevronRight, IndianRupee, Package, ReceiptText,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  CartesianGrid, Legend,
+} from "recharts";
 
 interface DashboardData {
   cashFlow: { inflows: number; outflows: number; netCashFlow: number; period: string };
@@ -26,26 +28,15 @@ interface DashboardData {
   recentActivity: { id: number; eventType: string; amount: number; direction: string; eventDate: string; narration: string | null; reconciliationStatus: string }[];
 }
 
-function StatCard({
-  title, value, sub, icon: Icon, trend, color = "default", href
-}: {
+interface TrendsData { months: { month: string; inflow: number; outflow: number; net: number }[] }
+interface ItemsData { items: { id: number; name: string; isLowStock: boolean; stockQty: number; salePrice: number }[]; lowStockCount: number }
+
+function StatCard({ title, value, sub, icon: Icon, trend, color = "default", href }: {
   title: string; value: string; sub?: string; icon: React.ElementType;
   trend?: "up" | "down"; color?: "default" | "success" | "warning" | "danger"; href?: string;
 }) {
-  const colorClass = {
-    default: "text-primary",
-    success: "text-emerald-600",
-    warning: "text-amber-600",
-    danger: "text-red-600",
-  }[color];
-
-  const bgClass = {
-    default: "bg-primary/10",
-    success: "bg-emerald-50",
-    warning: "bg-amber-50",
-    danger: "bg-red-50",
-  }[color];
-
+  const colorClass = { default: "text-primary", success: "text-emerald-600", warning: "text-amber-600", danger: "text-red-600" }[color];
+  const bgClass = { default: "bg-primary/10", success: "bg-emerald-50", warning: "bg-amber-50", danger: "bg-red-50" }[color];
   const card = (
     <Card className="hover:shadow-md transition-shadow cursor-default">
       <CardContent className="pt-5 pb-4">
@@ -62,7 +53,6 @@ function StatCard({
       </CardContent>
     </Card>
   );
-
   if (href) return <Link href={href}>{card}</Link>;
   return card;
 }
@@ -75,13 +65,31 @@ export default function DashboardPage() {
     queryKey: [apiUrl("/dashboard")],
     enabled: !!token,
     queryFn: async ({ queryKey }) => {
-      const res = await fetch(queryKey[0] as string, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await fetch(queryKey[0] as string, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!res.ok) throw new Error("Failed to load dashboard");
       return res.json();
     },
     refetchInterval: 30000,
+  });
+
+  const { data: trends } = useQuery<TrendsData>({
+    queryKey: [apiUrl("/reports/monthly-trends")],
+    enabled: !!token,
+    queryFn: async ({ queryKey }) => {
+      const res = await fetch(queryKey[0] as string, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) return { months: [] };
+      return res.json();
+    },
+  });
+
+  const { data: itemsData } = useQuery<ItemsData>({
+    queryKey: [apiUrl("/items")],
+    enabled: !!token,
+    queryFn: async ({ queryKey }) => {
+      const res = await fetch(queryKey[0] as string, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) return { items: [], lowStockCount: 0 };
+      return res.json();
+    },
   });
 
   const agingChartData = data ? [
@@ -104,27 +112,20 @@ export default function DashboardPage() {
     );
   }
 
-  const isEmpty = !!data && !data.parties.total && !data.outstandings.totalReceivables && !data.outstandings.totalPayables && !data.recentActivity.length;
+  const isEmpty = !!data && !data.parties.total && !data.outstandings.totalReceivables && !data.recentActivity.length;
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">
-            Namaste 🙏 {business?.businessName}
-          </h1>
+          <h1 className="text-xl font-bold">Namaste 🙏 {business?.businessName}</h1>
           <p className="text-sm text-muted-foreground">Aaj ka overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/import">Import</Link>
-          </Button>
+          <Button asChild variant="outline" size="sm"><Link href="/invoices">New Invoice</Link></Button>
           <Button asChild size="sm" className="gap-1.5">
-            <Link href="/parchi">
-              <Plus className="h-4 w-4" />
-              New Parchi
-            </Link>
+            <Link href="/parchi"><Plus className="h-4 w-4" />New Parchi</Link>
           </Button>
         </div>
       </div>
@@ -135,19 +136,18 @@ export default function DashboardPage() {
             <div>
               <p className="font-semibold">Start here</p>
               <p className="text-sm text-muted-foreground">Pehli entry, import, ya party add karke dashboard bhar dein.</p>
-              <p className="text-xs text-muted-foreground mt-1">Upgrade path: AI suggestions, forecast, and task nudges can live here next.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm"><Link href="/parties">Add Party</Link></Button>
-              <Button asChild variant="outline" size="sm"><Link href="/import">Import Data</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link href="/invoices">New Invoice</Link></Button>
               <Button asChild size="sm"><Link href="/parchi">New Parchi</Link></Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Alert banner */}
-      {data && (data.reconciliation.total > 0 || data.overdue.count > 0) && (
+      {/* Alert banners */}
+      {data && (data.reconciliation.total > 0 || data.overdue.count > 0 || (itemsData?.lowStockCount || 0) > 0) && (
         <div className="flex flex-wrap gap-2">
           {data.reconciliation.total > 0 && (
             <Link href="/reconciliation">
@@ -167,67 +167,96 @@ export default function DashboardPage() {
               </div>
             </Link>
           )}
+          {(itemsData?.lowStockCount || 0) > 0 && (
+            <Link href="/items">
+              <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-sm text-orange-800 cursor-pointer hover:bg-orange-100 transition-colors">
+                <Package className="h-4 w-4 flex-shrink-0" />
+                <span><strong>{itemsData!.lowStockCount}</strong> items low stock</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </div>
+            </Link>
+          )}
         </div>
       )}
 
       {/* Key metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          title="Total Receivables"
-          value={formatCurrency(data?.outstandings.totalReceivables || 0)}
-          sub="Aapko milna hai"
-          icon={IndianRupee}
-          color="success"
-          href="/outstandings"
-        />
-        <StatCard
-          title="Total Payables"
-          value={formatCurrency(data?.outstandings.totalPayables || 0)}
-          sub="Aapko dena hai"
-          icon={TrendingDown}
-          color="warning"
-          href="/outstandings"
-        />
-        <StatCard
-          title="Overdue Amount"
-          value={formatCurrency(data?.overdue.amount || 0)}
-          sub={`${data?.overdue.count || 0} parties`}
-          icon={AlertTriangle}
-          color="danger"
-          href="/collections"
-        />
-        <StatCard
-          title="Parties"
-          value={(data?.parties.total || 0).toString()}
-          sub={`${data?.parties.customers || 0} customers, ${data?.parties.vendors || 0} vendors`}
-          icon={Users}
-          href="/parties"
-        />
+        <StatCard title="Total Receivables" value={formatCurrency(data?.outstandings.totalReceivables || 0)} sub="Aapko milna hai" icon={IndianRupee} color="success" href="/outstandings" />
+        <StatCard title="Total Payables" value={formatCurrency(data?.outstandings.totalPayables || 0)} sub="Aapko dena hai" icon={TrendingDown} color="warning" href="/outstandings" />
+        <StatCard title="Overdue Amount" value={formatCurrency(data?.overdue.amount || 0)} sub={`${data?.overdue.count || 0} parties`} icon={AlertTriangle} color="danger" href="/collections" />
+        <StatCard title="Parties" value={(data?.parties.total || 0).toString()} sub={`${data?.parties.customers || 0} customers`} icon={Users} href="/parties" />
       </div>
 
-      {/* Cash flow (30 days) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {/* Insights cards row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-emerald-700 font-medium uppercase tracking-wide">Cash In (30d)</p>
+            <p className="text-xl font-bold text-emerald-700 mt-1">{formatCurrency(data?.cashFlow.inflows || 0)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-50 to-white border-red-100">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-red-600 font-medium uppercase tracking-wide">Cash Out (30d)</p>
+            <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(data?.cashFlow.outflows || 0)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-primary/5 to-white border-primary/10">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs text-primary font-medium uppercase tracking-wide">Net Position</p>
+            <p className={`text-xl font-bold mt-1 ${(data?.outstandings.netPosition || 0) >= 0 ? "text-primary" : "text-red-600"}`}>{formatCurrency(data?.outstandings.netPosition || 0)}</p>
+          </CardContent>
+        </Card>
+        <Link href="/items">
+          <Card className="bg-gradient-to-br from-orange-50 to-white border-orange-100 cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="pt-4 pb-3">
+              <p className="text-xs text-orange-600 font-medium uppercase tracking-wide flex items-center gap-1"><Package className="h-3 w-3" />Item Inventory</p>
+              <p className="text-xl font-bold text-orange-600 mt-1">{itemsData?.items.length || 0} items</p>
+              {(itemsData?.lowStockCount || 0) > 0 && <p className="text-xs text-orange-500 mt-0.5">{itemsData!.lowStockCount} low stock</p>}
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Monthly trend chart */}
+      {trends?.months && trends.months.some(m => m.inflow > 0 || m.outflow > 0) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-              Cash Flow (30 Din)
-              <span className="text-xs bg-muted rounded px-2 py-0.5">Last 30 days</span>
+              6-Month Cash Flow Trend
+              <Link href="/reports" className="text-xs text-primary flex items-center gap-1">Full Report <ChevronRight className="h-3 w-3" /></Link>
             </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={trends.months} barSize={20}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f4f4f4" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Bar dataKey="inflow" name="Inflow" fill="#10b981" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="outflow" name="Outflow" fill="#f97316" radius={[3, 3, 0, 0]} />
+                <Legend />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aging + cash flow row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Cash Flow (30 Din)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-emerald-600 text-sm">
-                  <ArrowUpRight className="h-4 w-4" />
-                  <span>Inflows</span>
-                </div>
+                <div className="flex items-center gap-1.5 text-emerald-600 text-sm"><ArrowUpRight className="h-4 w-4" /><span>Inflows</span></div>
                 <span className="font-semibold text-emerald-600">{formatCurrency(data?.cashFlow.inflows || 0)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-red-500 text-sm">
-                  <ArrowDownRight className="h-4 w-4" />
-                  <span>Outflows</span>
-                </div>
+                <div className="flex items-center gap-1.5 text-red-500 text-sm"><ArrowDownRight className="h-4 w-4" /><span>Outflows</span></div>
                 <span className="font-semibold text-red-500">{formatCurrency(data?.cashFlow.outflows || 0)}</span>
               </div>
               <div className="border-t pt-2 flex items-center justify-between">
@@ -240,14 +269,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Aging chart */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
               Aging Breakdown (Receivables)
-              <Link href="/reports" className="text-xs text-primary flex items-center gap-1">
-                Full Report <ChevronRight className="h-3 w-3" />
-              </Link>
+              <Link href="/reports" className="text-xs text-primary flex items-center gap-1">Full Report <ChevronRight className="h-3 w-3" /></Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -258,9 +284,7 @@ export default function DashboardPage() {
                   <YAxis hide />
                   <Tooltip formatter={(v: number) => [formatCurrency(v), "Amount"]} />
                   <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {agingChartData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
+                    {agingChartData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -276,14 +300,11 @@ export default function DashboardPage() {
 
       {/* Top debtors + recent activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top debtors */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
               Top Debtors
-              <Link href="/outstandings" className="text-xs text-primary flex items-center gap-1">
-                Sab Dekho <ChevronRight className="h-3 w-3" />
-              </Link>
+              <Link href="/outstandings" className="text-xs text-primary flex items-center gap-1">Sab Dekho <ChevronRight className="h-3 w-3" /></Link>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -297,9 +318,7 @@ export default function DashboardPage() {
                 {data.topDebtors.map((debtor, i) => (
                   <div key={debtor.partyId} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                        {i + 1}
-                      </div>
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{i + 1}</div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{debtor.partyName}</p>
                         {debtor.mobile && <p className="text-xs text-muted-foreground">{debtor.mobile}</p>}
@@ -308,13 +327,8 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-sm font-semibold text-red-600">{formatCurrency(debtor.amountDue)}</span>
                       {debtor.mobile && (
-                        <a
-                          href={`https://wa.me/91${debtor.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(`Namaste, please pay your outstanding amount of ₹${debtor.amountDue.toLocaleString("en-IN")}`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600"
-                          title="WhatsApp"
-                        >
+                        <a href={`https://wa.me/91${debtor.mobile.replace(/\D/g, "")}?text=${encodeURIComponent(`Namaste, please pay your outstanding amount of ₹${debtor.amountDue.toLocaleString("en-IN")}`)}`}
+                          target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600" title="WhatsApp">
                           <MessageCircle className="h-4 w-4" />
                         </a>
                       )}
@@ -326,14 +340,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent activity */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center justify-between">
               Recent Activity
-              <Link href="/parchi" className="text-xs text-primary flex items-center gap-1">
-                <Plus className="h-3 w-3" /> New Entry
-              </Link>
+              <Link href="/parchi" className="text-xs text-primary flex items-center gap-1"><Plus className="h-3 w-3" /> New Entry</Link>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -351,20 +362,16 @@ export default function DashboardPage() {
                   <div key={event.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${event.direction === "inflow" ? "bg-emerald-50" : "bg-red-50"}`}>
-                        {event.direction === "inflow"
-                          ? <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
-                          : <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />}
+                        {event.direction === "inflow" ? <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" /> : <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-medium truncate">{event.narration || event.eventType.replace(/_/g, " ")}</p>
                         <p className="text-xs text-muted-foreground">{formatDate(event.eventDate)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-sm font-semibold ${event.direction === "inflow" ? "text-emerald-600" : "text-red-500"}`}>
-                        {event.direction === "inflow" ? "+" : "-"}{formatCurrency(event.amount)}
-                      </span>
-                    </div>
+                    <span className={`text-sm font-semibold flex-shrink-0 ${event.direction === "inflow" ? "text-emerald-600" : "text-red-500"}`}>
+                      {event.direction === "inflow" ? "+" : "-"}{formatCurrency(event.amount)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -376,17 +383,15 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {[
-          { href: "/parchi", icon: Plus, label: "Add Parchi", color: "bg-primary/10 text-primary" },
-          { href: "/collections", icon: MessageCircle, label: "Send Reminder", color: "bg-emerald-50 text-emerald-600" },
-          { href: "/reconciliation", icon: RefreshCw, label: "Reconcile", color: "bg-amber-50 text-amber-600" },
-          { href: "/import", icon: BarChart3, label: "Import Data", color: "bg-purple-50 text-purple-600" },
+          { href: "/invoices", icon: ReceiptText, label: "New Invoice", color: "bg-primary/10 text-primary" },
+          { href: "/parchi", icon: Plus, label: "Add Parchi", color: "bg-emerald-50 text-emerald-600" },
+          { href: "/collections", icon: MessageCircle, label: "Send Reminder", color: "bg-amber-50 text-amber-600" },
+          { href: "/items", icon: Package, label: "Item Master", color: "bg-orange-50 text-orange-600" },
         ].map(action => (
           <Link key={action.href} href={action.href}>
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="flex items-center gap-3 py-3 px-4">
-                <div className={`p-2 rounded-lg ${action.color}`}>
-                  <action.icon className="h-4 w-4" />
-                </div>
+                <div className={`p-2 rounded-lg ${action.color}`}><action.icon className="h-4 w-4" /></div>
                 <span className="text-sm font-medium">{action.label}</span>
               </CardContent>
             </Card>
