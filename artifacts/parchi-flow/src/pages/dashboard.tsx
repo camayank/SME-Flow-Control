@@ -135,6 +135,7 @@ export default function DashboardPage() {
             <div>
               <p className="font-semibold">Start here</p>
               <p className="text-sm text-muted-foreground">Pehli entry, import, ya party add karke dashboard bhar dein.</p>
+              <p className="text-xs text-muted-foreground mt-1">Upgrade path: this area can later show AI suggestions, forecast, and task nudges.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm"><Link href="/parties">Add Party</Link></Button>

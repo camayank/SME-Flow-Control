@@ -87,11 +87,20 @@ export default function PartiesPage() {
           <h1 className="text-xl font-bold">Parties</h1>
           <p className="text-sm text-muted-foreground">{parties.length} parties registered</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} size="sm" className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Add Party
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm"><Link href="/collections">Collections</Link></Button>
+          <Button onClick={() => setShowAddDialog(true)} size="sm" className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Add Party
+          </Button>
+        </div>
       </div>
+
+      <Card className="border-dashed border-primary/25 bg-primary/5">
+        <CardContent className="py-3 text-sm">
+          Future upgrade: party timeline, credit limits, KYC docs, and automated follow-up history can sit here cleanly.
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <div className="flex gap-2">

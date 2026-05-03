@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Link as RouterLink } from "wouter";
 import { Upload, Database, Link, CheckCircle, AlertCircle, RefreshCw, FileText, Zap } from "lucide-react";
 
 type UploadMode = "invoice" | "kacha" | "pakka" | "ledger" | "bank_statement" | "party_list";
@@ -167,6 +168,18 @@ export default function ImportPage() {
         <p className="text-sm text-muted-foreground">Kacha / Pakka invoice, CSV/Excel, aur accounting sync</p>
       </div>
 
+      <Card className="border-dashed border-primary/25 bg-primary/5">
+        <CardContent className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Upgrade-ready import flow</p>
+            <p className="text-xs text-muted-foreground">Aage chalkar OCR, PDF parsing, GST-aware extraction, aur auto-mapping add ki ja sakti hai.</p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <RouterLink href="/dashboard">Back to Dashboard</RouterLink>
+          </Button>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="upload">
         <TabsList>
           <TabsTrigger value="upload">📂 Invoice / CSV</TabsTrigger>
@@ -222,6 +235,9 @@ export default function ImportPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-xs text-muted-foreground">
                   <div className="rounded-lg bg-muted/40 px-3 py-2">Kacha = rough entry. Pakka = final invoice style upload.</div>
                   <div className="rounded-lg bg-muted/40 px-3 py-2">Upload ke baad column mapping aur preview milega.</div>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 mt-3 text-xs text-amber-900">
+                  Upgrade note: future build mein PDF invoice OCR, duplicate detection, aur smart party suggestion add ho sakta hai.
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => setUploadMode("invoice")}>Invoice</Button>

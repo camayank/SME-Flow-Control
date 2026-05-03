@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 type Step = "mobile" | "otp";
 
@@ -77,6 +78,11 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Badge variant="secondary">Demo-ready</Badge>
+              <Badge variant="secondary">Quick login</Badge>
+              <Badge variant="secondary">Upgrade-safe auth</Badge>
+            </div>
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               Demo login: Mobile <strong>9876543210</strong> · OTP <strong>123456</strong>
             </div>
