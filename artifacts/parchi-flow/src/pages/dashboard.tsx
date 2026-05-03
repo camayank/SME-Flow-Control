@@ -30,6 +30,7 @@ interface DashboardData {
 
 interface TrendsData { months: { month: string; inflow: number; outflow: number; net: number }[] }
 interface ItemsData { items: { id: number; name: string; isLowStock: boolean; stockQty: number; salePrice: number }[]; lowStockCount: number }
+interface BusinessesData { business: { id: number; businessName: string; city: string | null; state: string | null; gstin: string | null } | null; businesses: { id: number; businessName: string; city: string | null; state: string | null; gstin: string | null }[] }
 
 function StatCard({ title, value, sub, icon: Icon, trend, color = "default", href }: {
   title: string; value: string; sub?: string; icon: React.ElementType;
@@ -92,6 +93,16 @@ export default function DashboardPage() {
     },
   });
 
+  const { data: businessesData } = useQuery<BusinessesData>({
+    queryKey: [apiUrl("/business")],
+    enabled: !!token,
+    queryFn: async ({ queryKey }) => {
+      const res = await fetch(queryKey[0] as string, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) return { business: null, businesses: [] };
+      return res.json();
+    },
+  });
+
   const agingChartData = data ? [
     { name: "Not Due", value: data.agingBuckets["not_due"] || 0, color: "#6366f1" },
     { name: "1-7d", value: data.agingBuckets["overdue_1_7"] || 0, color: "#f59e0b" },
@@ -116,11 +127,11 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Namaste 🙏 {business?.businessName}</h1>
           <p className="text-sm text-muted-foreground">Aaj ka overview</p>
+          {businessesData?.businesses?.length ? <p className="text-xs text-muted-foreground mt-1">{businessesData.businesses.length} business connected</p> : null}
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm"><Link href="/invoices">New Invoice</Link></Button>
@@ -146,7 +157,6 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Alert banners */}
       {data && (data.reconciliation.total > 0 || data.overdue.count > 0 || (itemsData?.lowStockCount || 0) > 0) && (
         <div className="flex flex-wrap gap-2">
           {data.reconciliation.total > 0 && (
@@ -179,7 +189,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Key metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard title="Total Receivables" value={formatCurrency(data?.outstandings.totalReceivables || 0)} sub="Aapko milna hai" icon={IndianRupee} color="success" href="/outstandings" />
         <StatCard title="Total Payables" value={formatCurrency(data?.outstandings.totalPayables || 0)} sub="Aapko dena hai" icon={TrendingDown} color="warning" href="/outstandings" />
@@ -187,7 +196,6 @@ export default function DashboardPage() {
         <StatCard title="Parties" value={(data?.parties.total || 0).toString()} sub={`${data?.parties.customers || 0} customers`} icon={Users} href="/parties" />
       </div>
 
-      {/* Insights cards row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
           <CardContent className="pt-4 pb-3">
@@ -218,7 +226,6 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Monthly trend chart */}
       {trends?.months && trends.months.some(m => m.inflow > 0 || m.outflow > 0) && (
         <Card>
           <CardHeader className="pb-2">
@@ -243,7 +250,6 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Aging + cash flow row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <Card>
           <CardHeader className="pb-2">
@@ -298,7 +304,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Top debtors + recent activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -380,7 +385,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick actions */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {[
           { href: "/invoices", icon: ReceiptText, label: "New Invoice", color: "bg-primary/10 text-primary" },

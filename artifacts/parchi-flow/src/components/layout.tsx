@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
+import { apiUrl, getAuthToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, FileText, Users, Receipt, RefreshCw,
+  LayoutDashboard, Users, Receipt, RefreshCw,
   MessageCircle, Database, BarChart3, LogOut,
-  Menu, X, ChevronRight, Plus, Package, ReceiptText,
+  Menu, X, ChevronRight, Plus, Package, ReceiptText, ChevronDown,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -28,6 +30,19 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [location] = useLocation();
   const { user, business, logout } = useAuth();
+  const token = getAuthToken();
+
+  const { data: businessesData } = useQuery({
+    queryKey: [apiUrl("/business")],
+    enabled: !!token,
+    queryFn: async ({ queryKey }) => {
+      const res = await fetch(queryKey[0] as string, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) return { business: null, businesses: [] };
+      return res.json();
+    },
+  });
+
+  const businesses = businessesData?.businesses || [];
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -35,12 +50,10 @@ export default function Layout({ children }: LayoutProps) {
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={cn(
         "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-200",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
           <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-accent shadow-sm flex-shrink-0">
             <span className="text-white font-bold text-sm">P</span>
@@ -54,7 +67,30 @@ export default function Layout({ children }: LayoutProps) {
           </Button>
         </div>
 
-        {/* Nav */}
+        <div className="px-3 py-3 border-b border-sidebar-border space-y-2">
+          <div className="flex items-center justify-between text-xs text-sidebar-foreground/60 uppercase tracking-wide px-1">
+            <span>Business</span>
+            <ChevronDown className="h-3.5 w-3.5" />
+          </div>
+          <div className="rounded-lg bg-sidebar-accent/60 px-3 py-2">
+            <p className="text-sm font-medium truncate">{business?.businessName || "Current Business"}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">{business?.city || "India"}</p>
+          </div>
+          {businesses.length > 1 && (
+            <div className="space-y-1 max-h-28 overflow-y-auto">
+              {businesses.map((b: { id: number; businessName: string; city: string | null; state: string | null }) => (
+                <button key={b.id} className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-sidebar-accent">
+                  <span className="block truncate">{b.businessName}</span>
+                  <span className="block text-xs text-sidebar-foreground/60 truncate">{b.city || b.state || "India"}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <Button variant="outline" size="sm" className="w-full justify-start gap-2 bg-transparent text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent">
+            <Plus className="h-4 w-4" /> Add Business
+          </Button>
+        </div>
+
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {NAV_ITEMS.map(item => {
             const isActive = item.href === "/" ? location === "/" : location.startsWith(item.href);
@@ -76,7 +112,6 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </nav>
 
-        {/* User */}
         <div className="border-t border-sidebar-border p-3">
           <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg">
             <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-xs font-bold text-sidebar-primary-foreground flex-shrink-0">
@@ -93,9 +128,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar (mobile) */}
         <header className="lg:hidden flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
