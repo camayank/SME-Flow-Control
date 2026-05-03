@@ -10,6 +10,7 @@ import {
   TrendingUp, TrendingDown, AlertTriangle, RefreshCw,
   Users, ArrowUpRight, ArrowDownRight, Plus, MessageCircle,
   Clock, BarChart3, ChevronRight, IndianRupee, Package, ReceiptText,
+  Sparkles, Eye, Target,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -140,6 +141,29 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      <Card className="border-primary/15 bg-primary/5">
+        <CardContent className="pt-4 pb-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <p className="font-semibold">Your daily guidance</p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-3">
+            <div className="rounded-lg border bg-background p-3">
+              <div className="flex items-center gap-2 text-sm font-medium"><Eye className="h-4 w-4 text-primary" />Where am I?</div>
+              <p className="text-xs text-muted-foreground mt-1">You’re on the business overview. Check overdue, cash flow, and inventory first.</p>
+            </div>
+            <div className="rounded-lg border bg-background p-3">
+              <div className="flex items-center gap-2 text-sm font-medium"><Target className="h-4 w-4 text-emerald-600" />What next?</div>
+              <p className="text-xs text-muted-foreground mt-1">Open Outstandings, Follow-ups, or Reconciliation to fix today’s action items.</p>
+            </div>
+            <div className="rounded-lg border bg-background p-3">
+              <div className="flex items-center gap-2 text-sm font-medium"><Sparkles className="h-4 w-4 text-amber-600" />Why it matters</div>
+              <p className="text-xs text-muted-foreground mt-1">Every completed follow-up and reconciliation improves collection speed and score visibility.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {isEmpty && (
         <Card className="border-dashed border-primary/30 bg-primary/5">

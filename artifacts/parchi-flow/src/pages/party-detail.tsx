@@ -17,6 +17,7 @@ import {
   MessageCircle, Phone, ArrowLeft, FileText, Printer,
   Plus, CheckCircle, Calendar, IndianRupee, ReceiptText,
   ArrowUpRight, ArrowDownRight, Clock, AlertTriangle, Copy, ExternalLink,
+  Info,
 } from "lucide-react";
 
 interface LedgerEntry {
@@ -196,6 +197,17 @@ export default function PartyDetailPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-4xl mx-auto">
+      <Card className="border-blue-200 bg-blue-50/60">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-blue-700 mt-0.5" />
+            <div>
+              <p className="font-semibold text-blue-900">Party view guide</p>
+              <p className="text-sm text-blue-900/80 mt-1">Use Ledger to verify entries, Invoices to check billing status, and Follow-ups to see collections progress and next actions.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/parties")} className="mt-0.5 flex-shrink-0">
